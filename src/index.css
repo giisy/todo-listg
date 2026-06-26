@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { font-size: 14px; }
+  body {
+    @apply bg-bg-primary text-text-primary;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+  ::selection { @apply bg-accent-blue/30 text-white; }
+}
+
+@layer components {
+  .glass {
+    background: rgba(26, 30, 36, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(42, 47, 56, 0.6);
+  }
+  .card {
+    @apply bg-bg-card rounded-lg border border-border/60 shadow-card;
+  }
+  .card-elevated {
+    @apply bg-bg-elevated rounded-lg border border-border/40 shadow-elevated;
+  }
+  .btn-primary {
+    @apply bg-accent-blue hover:bg-accent-blue-dim text-white font-medium px-4 py-2 rounded-md transition-all duration-150 text-sm flex items-center gap-2;
+  }
+  .btn-ghost {
+    @apply text-text-secondary hover:text-text-primary hover:bg-white/5 rounded-md px-3 py-2 transition-all duration-150 text-sm flex items-center gap-2;
+  }
+  .btn-icon {
+    @apply w-8 h-8 flex items-center justify-center rounded-md text-text-secondary hover:text-text-primary hover:bg-white/5 transition-all duration-150;
+  }
+  .input {
+    @apply bg-bg-card border border-border text-text-primary placeholder:text-text-muted rounded-md px-3 py-2 text-sm w-full transition-all duration-150 focus:border-accent-blue focus:outline-none;
+  }
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-text-secondary transition-all duration-150 cursor-pointer select-none w-full;
+  }
+  .nav-item:hover {
+    @apply text-text-primary bg-white/5;
+  }
+  .nav-item.active {
+    @apply text-accent-blue bg-accent-blue/10;
+  }
+  .divider {
+    @apply border-t border-border/50 my-2;
+  }
+  .priority-dot {
+    @apply w-2 h-2 rounded-full flex-shrink-0;
+  }
+  .stat-card {
+    @apply card p-5 flex flex-col gap-3 hover:border-border/80 transition-all duration-200;
+  }
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center;
+  }
+  .modal-content {
+    @apply bg-bg-card border border-border rounded-xl shadow-modal w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto;
+  }
+}
