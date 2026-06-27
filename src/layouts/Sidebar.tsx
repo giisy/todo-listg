@@ -6,6 +6,7 @@ import {
   Plus, Zap,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
+import { supabase } from '@/services/supabase'
 import type { NavPage } from '@/types'
 import { cn } from '@/utils/cn'
 
@@ -73,7 +74,7 @@ export default function Sidebar() {
         <div className={cn('flex items-center', isSidebarCollapsed ? 'justify-center' : 'gap-3')}>
           <div className="relative flex-shrink-0">
             <div className="w-9 h-9 rounded-md bg-gradient-to-br from-accent-blue to-accent-purple flex items-center justify-center text-white font-semibold text-sm shadow-glow-sm">
-              G
+              {settings.name.charAt(0).toUpperCase()}
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-accent-emerald rounded-full border-2 border-bg-secondary" />
           </div>
@@ -87,7 +88,7 @@ export default function Sidebar() {
                 className="min-w-0 flex-1"
               >
                 <p className="text-sm font-semibold text-text-primary truncate">{settings.name}</p>
-                <p className="text-xs text-text-secondary">Hi, Gis 👋</p>
+                <p className="text-xs text-text-secondary">Hi, {settings.name.split(' ')[0]} 👋</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -222,7 +223,10 @@ export default function Sidebar() {
                 <Zap size={10} />
                 <span className="text-2xs">v1.0.0</span>
               </div>
-              <button className="flex items-center gap-1.5 text-text-muted hover:text-accent-rose text-2xs transition-colors duration-150">
+              <button
+                onClick={() => supabase.auth.signOut()}
+                className="flex items-center gap-1.5 text-text-muted hover:text-accent-rose text-2xs transition-colors duration-150"
+              >
                 <LogOut size={11} />
                 Logout
               </button>
