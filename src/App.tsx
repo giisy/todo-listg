@@ -5,6 +5,9 @@ import TodayPage from '@/pages/TodayPage'
 import UpcomingPage from '@/pages/UpcomingPage'
 import ImportantPage from '@/pages/ImportantPage'
 import TrashPage from '@/pages/TrashPage'
+import NotesPage from '@/pages/NotesPage'
+import AnalyticsPage from '@/pages/AnalyticsPage'
+import SettingsPage from '@/pages/SettingsPage'
 
 function AppContent() {
   const { state } = useApp()
@@ -15,6 +18,9 @@ function AppContent() {
       case 'today': return <TodayPage />
       case 'upcoming': return <UpcomingPage />
       case 'important': return <ImportantPage />
+      case 'notes': return <NotesPage />
+      case 'analytics': return <AnalyticsPage />
+      case 'settings': return <SettingsPage />
       case 'trash': return <TrashPage />
       default:
         return (
