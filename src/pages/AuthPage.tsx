@@ -59,6 +59,7 @@ export default function AuthPage() {
   const handleRegister = async (data: RegisterData) => {
     setLoading(true)
     setError('')
+    setSuccess('')
     try {
       const { error, data: signUpData } = await supabase.auth.signUp({
         email: data.email,
@@ -69,15 +70,15 @@ export default function AuthPage() {
         },
       })
       if (error) {
-        if (error.message.includes('already been registered') || error.message.includes('already registered')) {
-          setError('Email already registered. Please sign in instead.')
-        } else {
-          setError(error.message)
-        }
+        setError(error.message)
       } else if (signUpData.session) {
         setSuccess('Account created! Redirecting...')
-      } else {
-        setSuccess('Account created! Please check your email to verify.')
+      } else if (signUpData.user && !signUpData.session) {
+        if (signUpData.user.identities && signUpData.user.identities.length === 0) {
+          setError('Email already exists but not verified. Please check your email or sign in.')
+        } else {
+          setSuccess('Account created! Please check your email to verify.')
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.')
