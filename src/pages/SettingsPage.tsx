@@ -1,26 +1,36 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { User, Bell, Timer, Palette, Save, Check } from 'lucide-react'
+import { User, Bell, Timer, Palette, Save, Check, Loader2 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
+import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/utils/cn'
 
 export default function SettingsPage() {
   const { state, dispatch } = useApp()
+  const { updateProfile } = useAuth()
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [name, setName] = useState(state.settings.name)
   const [pomodoroWork, setPomodoroWork] = useState(state.settings.pomodoroWork)
   const [pomodoroBreak, setPomodoroBreak] = useState(state.settings.pomodoroBreak)
   const [notifications, setNotifications] = useState(state.settings.notifications)
 
-  const handleSave = () => {
+const handleSave = async () => {
+  setSaving(true)
+  try {
+    await updateProfile(name)
     dispatch({
       type: 'UPDATE_SETTINGS',
       payload: { name, pomodoroWork, pomodoroBreak, notifications },
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  } catch (err) {
+    console.error('Failed to save settings:', err)
+  } finally {
+    setSaving(false)
   }
-
+}
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-6 max-w-2xl mx-auto space-y-6">
@@ -31,33 +41,7 @@ export default function SettingsPage() {
           <p className="text-xs text-text-muted mt-0.5">Customize your experience</p>
         </div>
 
-        {/* Profile */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card p-5 space-y-4"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <User size={14} className="text-text-secondary" />
-            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Profile</span>
-          </div>
 
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-accent-blue to-accent-purple flex items-center justify-center text-white text-xl font-bold shadow-glow-sm">
-              {name.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1">
-              <label className="block text-2xs text-text-muted font-medium mb-1.5">Display Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className="input"
-                placeholder="Your name"
-              />
-            </div>
-          </div>
-        </motion.div>
 
         {/* Pomodoro */}
         <motion.div
@@ -125,6 +109,21 @@ export default function SettingsPage() {
               <p className="text-sm font-medium text-text-primary">Enable Notifications</p>
               <p className="text-xs text-text-muted mt-0.5">Get reminded about tasks and deadlines</p>
             </div>
+            <button
+            onClick={() => {
+              navigator.serviceWorker.ready.then(registration => {
+                registration.active?.postMessage({
+                  type: 'SCHEDULE_NOTIFICATION',
+                  title: '🔔 Test TaskFlow',
+                  body: 'Notifikasi berhasil! ✅',
+                  delay: 3000,
+                })
+              })
+            }}
+            className="w-full py-2 rounded-lg border border-accent-blue/30 text-accent-blue text-xs font-medium hover:bg-accent-blue/10 transition-colors"
+          >
+            🔔 Test Notifikasi (3 detik)
+          </button>
             <button
               onClick={() => setNotifications(!notifications)}
               className={cn(
@@ -196,25 +195,32 @@ export default function SettingsPage() {
 
         {/* Save button */}
         <div className="flex justify-end">
-          <button
-            onClick={handleSave}
-            className={cn(
-              'btn-primary px-6',
-              saved && 'bg-accent-emerald hover:bg-accent-emerald'
-            )}
-          >
-            {saved ? (
-              <>
-                <Check size={15} />
-                Saved!
-              </>
-            ) : (
-              <>
-                <Save size={15} />
-                Save Changes
-              </>
-            )}
-          </button>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className={cn(
+             'btn-primary px-6',
+              saved && 'bg-accent-emerald hover:bg-accent-emerald',
+              saving && 'opacity-70 cursor-not-allowed'
+       )}
+    >
+        {saving ? (
+    <>
+      <Loader2 size={15} className="animate-spin" />
+      Saving...
+    </>
+  ) : saved ? (
+    <>
+      <Check size={15} />
+      Saved!
+    </>
+  ) : (
+    <>
+      <Save size={15} />
+      Save Changes
+    </>
+  )}
+</button>
         </div>
 
       </div>
