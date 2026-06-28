@@ -28,7 +28,7 @@ type LoginData = z.infer<typeof loginSchema>
 type RegisterData = z.infer<typeof registerSchema>
 
 export default function AuthPage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [showPassword, setShowPassword] = useState(false)
@@ -37,10 +37,21 @@ export default function AuthPage() {
   const [success, setSuccess] = useState('')
 
   useEffect(() => {
-    if (user) {
+    if (user && !authLoading) {
       navigate('/')
     }
-  }, [user, navigate])
+  }, [user, authLoading, navigate])
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 size={24} className="animate-spin text-accent-blue" />
+          <p className="text-xs text-text-muted">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   const loginForm = useForm<LoginData>({ resolver: zodResolver(loginSchema) })
   const registerForm = useForm<RegisterData>({ resolver: zodResolver(registerSchema) })
