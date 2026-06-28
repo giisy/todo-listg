@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Mail, Lock, User, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react'
 import { supabase } from '@/services/supabase'
+import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/utils/cn'
+import { useNavigate } from 'react-router-dom'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email'),
@@ -26,11 +28,19 @@ type LoginData = z.infer<typeof loginSchema>
 type RegisterData = z.infer<typeof registerSchema>
 
 export default function AuthPage() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  useEffect(() => {
+    if (user) {
+      navigate('/')
+    }
+  }, [user, navigate])
 
   const loginForm = useForm<LoginData>({ resolver: zodResolver(loginSchema) })
   const registerForm = useForm<RegisterData>({ resolver: zodResolver(registerSchema) })
@@ -59,7 +69,11 @@ export default function AuthPage() {
         },
       })
       if (error) {
-        setError(error.message)
+        if (error.message.includes('already been registered') || error.message.includes('already registered')) {
+          setError('Email already registered. Please sign in instead.')
+        } else {
+          setError(error.message)
+        }
       } else if (signUpData.session) {
         setSuccess('Account created! Redirecting...')
       } else {
