@@ -1,12 +1,14 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/services/supabase'
+import { upsertProfile } from '@/services/taskService'
 
 interface AuthState {
   user: User | null
   session: Session | null
   loading: boolean
   profile: { name: string } | null
+  updateProfile: (name: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthState>({
@@ -14,6 +16,7 @@ const AuthContext = createContext<AuthState>({
   session: null,
   loading: true,
   profile: null,
+  updateProfile: async () => {},  // ← tambah ini
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -50,8 +53,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data) setProfile(data)
   }
 
+  const updateProfile = async (name: string) => {
+    if (!user) return
+    await upsertProfile(user.id, name)
+    setProfile({ name })
+  }
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, profile }}>
+    <AuthContext.Provider value={{ user, session, loading, profile, updateProfile }}>
       {children}
     </AuthContext.Provider>
   )
