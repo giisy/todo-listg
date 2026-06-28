@@ -7,7 +7,6 @@ import { Mail, Lock, User, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-rea
 import { supabase } from '@/services/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/utils/cn'
-import { useNavigate } from 'react-router-dom'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email'),
@@ -29,7 +28,6 @@ type RegisterData = z.infer<typeof registerSchema>
 
 export default function AuthPage() {
   const { user, loading: authLoading } = useAuth()
-  const navigate = useNavigate()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -38,9 +36,9 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      navigate('/')
+      window.location.href = '/'
     }
-  }, [user, authLoading, navigate])
+  }, [user, authLoading])
 
   if (authLoading) {
     return (
