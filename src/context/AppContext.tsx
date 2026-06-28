@@ -47,7 +47,7 @@ function addActivity(state: AppState, log: Omit<ActivityLog, 'id' | 'timestamp'>
 }
 
 const defaultSettings: UserSettings = {
-  name: 'Gisa',
+  name: 'name',
   pomodoroWork: 25,
   pomodoroBreak: 5,
   notifications: true,
@@ -173,7 +173,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const loaded: Partial<AppState> = {}
-    const keys = ['TASKS', 'NOTES', 'CATEGORIES', 'ACTIVITY', 'SETTINGS', 'TRASH'] as const
+    const keys = ['CATEGORIES', 'TRASH'] as const
     keys.forEach(key => {
       const raw = localStorage.getItem(STORAGE_KEYS[key])
       if (raw) {

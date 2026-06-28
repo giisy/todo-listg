@@ -10,16 +10,19 @@ import ImportantPage from '@/pages/ImportantPage'
 import TrashPage from '@/pages/TrashPage'
 import NotesPage from '@/pages/NotesPage'
 import AnalyticsPage from '@/pages/AnalyticsPage'
-import SettingsPage from '@/pages/SettingsPage'
 import PomodoroPage from '@/pages/PomodoroPage'
 import ProjectsPage from '@/pages/ProjectsPage'
 import CategoriesPage from '@/pages/CategoriesPage'
-import { supabase } from '@/services/supabase'
+import RecentPage from '@/pages/RecentPage'
+import ProfilePage from '@/pages/ProfilePage'
+import SettingsPage from '@/pages/SettingsPage'
+import { useSupabaseSync } from '@/hooks/useSupabaseSync'
 import { Loader2 } from 'lucide-react'
 
 function AppContent() {
   const { state, dispatch } = useApp()
-  const { user, profile } = useAuth()
+  const { profile } = useAuth()
+  useSupabaseSync()
 
   useEffect(() => {
     if (profile?.name) {
@@ -35,6 +38,8 @@ function AppContent() {
       case 'important': return <ImportantPage />
       case 'notes': return <NotesPage />
       case 'analytics': return <AnalyticsPage />
+      case 'recent': return <RecentPage />
+      case 'profile': return <ProfilePage />
       case 'settings': return <SettingsPage />
       case 'trash': return <TrashPage />
       case 'pomodoro': return <PomodoroPage />
@@ -62,7 +67,10 @@ function Root() {
   if (loading) {
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-accent-blue" />
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 size={24} className="animate-spin text-accent-blue" />
+          <p className="text-xs text-text-muted">Loading TaskFlow...</p>
+        </div>
       </div>
     )
   }
