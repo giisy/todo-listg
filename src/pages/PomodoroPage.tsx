@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Pause, RotateCcw, Coffee, Brain, Timer, CheckCircle2 } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Play, Pause, RotateCcw, Coffee, Brain, Timer, CheckCircle2, Settings, Save, Check, Loader2 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { cn } from '@/utils/cn'
 
 type Mode = 'work' | 'break'
 
 export default function PomodoroPage() {
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
   const workDuration = state.settings.pomodoroWork * 60
   const breakDuration = state.settings.pomodoroBreak * 60
 
@@ -15,6 +15,10 @@ export default function PomodoroPage() {
   const [timeLeft, setTimeLeft] = useState(workDuration)
   const [isRunning, setIsRunning] = useState(false)
   const [sessions, setSessions] = useState(0)
+  const [pomodoroWork, setPomodoroWork] = useState(state.settings.pomodoroWork)
+  const [pomodoroBreak, setPomodoroBreak] = useState(state.settings.pomodoroBreak)
+  const [savedTimer, setSavedTimer] = useState(false)
+  const [savingTimer, setSavingTimer] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const total = mode === 'work' ? workDuration : breakDuration
@@ -57,6 +61,17 @@ export default function PomodoroPage() {
     setTimeLeft(m === 'work' ? workDuration : breakDuration)
   }
 
+  const handleSaveTimer = async () => {
+    setSavingTimer(true)
+    try {
+      dispatch({ type: 'UPDATE_SETTINGS', payload: { pomodoroWork, pomodoroBreak } })
+      setSavedTimer(true)
+      setTimeout(() => setSavedTimer(false), 2000)
+    } finally {
+      setSavingTimer(false)
+    }
+  }
+
   const minutes = String(Math.floor(timeLeft / 60)).padStart(2, '0')
   const seconds = String(timeLeft % 60).padStart(2, '0')
 
@@ -83,9 +98,7 @@ export default function PomodoroPage() {
             onClick={() => switchMode('work')}
             className={cn(
               'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
-              mode === 'work'
-                ? 'bg-accent-blue text-white'
-                : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+              mode === 'work' ? 'bg-accent-blue text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
             )}
           >
             <Brain size={14} />
@@ -95,9 +108,7 @@ export default function PomodoroPage() {
             onClick={() => switchMode('break')}
             className={cn(
               'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-150',
-              mode === 'break'
-                ? 'bg-accent-emerald text-white'
-                : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+              mode === 'break' ? 'bg-accent-emerald text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
             )}
           >
             <Coffee size={14} />
@@ -111,15 +122,9 @@ export default function PomodoroPage() {
 
         {/* Timer */}
         <div className="card p-8 flex flex-col items-center gap-6">
-          {/* Ring */}
           <div className="relative" style={{ width: size, height: size }}>
             <svg width={size} height={size} className="-rotate-90">
-              <circle
-                cx={size / 2} cy={size / 2} r={r}
-                fill="none"
-                stroke="rgba(42,47,56,0.8)"
-                strokeWidth={strokeWidth}
-              />
+              <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(42,47,56,0.8)" strokeWidth={strokeWidth} />
               <motion.circle
                 cx={size / 2} cy={size / 2} r={r}
                 fill="none"
@@ -131,56 +136,34 @@ export default function PomodoroPage() {
                 transition={{ duration: 0.5 }}
               />
             </svg>
-
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-              <span className="text-5xl font-bold text-text-primary font-mono tracking-tight">
-                {minutes}:{seconds}
-              </span>
-              <span className={cn(
-                'text-xs font-medium uppercase tracking-widest',
-                mode === 'work' ? 'text-accent-blue' : 'text-accent-emerald'
-              )}>
+              <span className="text-5xl font-bold text-text-primary font-mono tracking-tight">{minutes}:{seconds}</span>
+              <span className={cn('text-xs font-medium uppercase tracking-widest', mode === 'work' ? 'text-accent-blue' : 'text-accent-emerald')}>
                 {mode === 'work' ? 'Focus Time' : 'Break Time'}
               </span>
             </div>
           </div>
 
-          {/* Controls */}
           <div className="flex items-center gap-4">
-            <button
-              onClick={reset}
-              className="w-12 h-12 rounded-full border border-border hover:border-border/80 flex items-center justify-center text-text-secondary hover:text-text-primary transition-all duration-150"
-            >
+            <button onClick={reset} className="w-12 h-12 rounded-full border border-border hover:border-border/80 flex items-center justify-center text-text-secondary hover:text-text-primary transition-all duration-150">
               <RotateCcw size={18} />
             </button>
-
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setIsRunning(!isRunning)}
-              className={cn(
-                'w-16 h-16 rounded-full flex items-center justify-center text-white shadow-glow transition-all duration-150',
-                mode === 'work' ? 'bg-accent-blue hover:bg-accent-blue-dim' : 'bg-accent-emerald hover:bg-emerald-600'
-              )}
+              className={cn('w-16 h-16 rounded-full flex items-center justify-center text-white shadow-glow transition-all duration-150', mode === 'work' ? 'bg-accent-blue hover:bg-accent-blue-dim' : 'bg-accent-emerald hover:bg-emerald-600')}
             >
               {isRunning ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
             </motion.button>
-
             <div className="w-12 h-12 rounded-full border border-border flex items-center justify-center">
               <Timer size={18} className="text-text-muted" />
             </div>
           </div>
 
-          {/* Session dots */}
           <div className="flex items-center gap-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'w-2.5 h-2.5 rounded-full transition-all duration-300',
-                  i < sessions % 4 ? 'bg-accent-blue' : 'bg-border'
-                )}
-              />
+              <div key={i} className={cn('w-2.5 h-2.5 rounded-full transition-all duration-300', i < sessions % 4 ? 'bg-accent-blue' : 'bg-border')} />
             ))}
           </div>
           <p className="text-xs text-text-muted">Every 4 sessions = long break</p>
@@ -191,9 +174,7 @@ export default function PomodoroPage() {
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-3">
               <Brain size={14} className="text-text-secondary" />
-              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                Focus On
-              </span>
+              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Focus On</span>
             </div>
             <div className="space-y-2">
               {pendingTasks.map(task => (
@@ -205,6 +186,36 @@ export default function PomodoroPage() {
             </div>
           </div>
         )}
+
+        {/* Timer Settings */}
+        <div className="card p-5 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Settings size={14} className="text-text-secondary" />
+            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Timer Settings</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-2xs text-text-muted font-medium mb-1.5">Work Duration (minutes)</label>
+              <input type="number" min={1} max={60} value={pomodoroWork} onChange={e => setPomodoroWork(Number(e.target.value))} className="input" />
+            </div>
+            <div>
+              <label className="block text-2xs text-text-muted font-medium mb-1.5">Break Duration (minutes)</label>
+              <input type="number" min={1} max={30} value={pomodoroBreak} onChange={e => setPomodoroBreak(Number(e.target.value))} className="input" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-text-muted">
+              Work <span className="text-accent-blue font-medium">{pomodoroWork}m</span> · Break <span className="text-accent-emerald font-medium">{pomodoroBreak}m</span>
+            </p>
+            <button
+              onClick={handleSaveTimer}
+              disabled={savingTimer}
+              className={cn('btn-primary text-xs py-1.5 px-4', savedTimer && 'bg-accent-emerald hover:bg-accent-emerald', savingTimer && 'opacity-70 cursor-not-allowed')}
+            >
+              {savingTimer ? <><Loader2 size={13} className="animate-spin" />Saving...</> : savedTimer ? <><Check size={13} />Saved!</> : <><Save size={13} />Save</>}
+            </button>
+          </div>
+        </div>
 
       </div>
     </div>
