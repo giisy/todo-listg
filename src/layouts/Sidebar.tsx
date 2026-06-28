@@ -3,7 +3,7 @@ import {
   LayoutDashboard, CalendarDays, Calendar, FolderOpen,
   Star, Tag, BookOpen, Timer, BarChart3, Settings,
   LogOut, ChevronLeft, ChevronRight, HardDrive, Trash2,
-  Plus, Zap,
+  Plus, Zap, CheckCircle2, AlertTriangle, TrendingUp, Activity,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { supabase } from '@/services/supabase'
@@ -29,11 +29,14 @@ const navItems: NavItem[] = [
 ]
 
 const bottomItems: NavItem[] = [
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'recent', label: 'Recent', icon: Activity },
   { id: 'trash', label: 'Trash', icon: Trash2 },
 ]
+interface SidebarProps {
+  onClose?: () => void
+}
 
-export default function Sidebar() {
+export default function Sidebar({ onClose }: SidebarProps) {
   const { state, dispatch } = useApp()
   const { isSidebarCollapsed, activePage, tasks, settings } = state
 
@@ -100,7 +103,10 @@ export default function Sidebar() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'today' })}
+              onClick={() => {
+                dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'today' })
+                onClose?.()
+              }}
               className="mt-3 w-full flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-accent-blue/10 hover:bg-accent-blue/20 border border-accent-blue/20 hover:border-accent-blue/40 text-accent-blue text-xs font-medium transition-all duration-150"
             >
               <Plus size={13} strokeWidth={2.5} />
@@ -140,7 +146,6 @@ export default function Sidebar() {
           const Icon = item.icon
           const isActive = activePage === item.id
           const badge = item.id === 'today' ? todayCount : item.id === 'important' ? importantCount : undefined
-
           return (
             <motion.button
               key={item.id}
@@ -169,6 +174,7 @@ export default function Sidebar() {
 
         <div className="divider" />
 
+
         {bottomItems.map((item) => {
           const Icon = item.icon
           const isActive = activePage === item.id
@@ -177,7 +183,10 @@ export default function Sidebar() {
               key={item.id}
               whileHover={{ x: isSidebarCollapsed ? 0 : 2 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: item.id })}
+              onClick={() => {
+                dispatch({ type: 'SET_ACTIVE_PAGE', payload: item.id })
+                onClose?.()
+              }}
               className={cn('nav-item', isSidebarCollapsed && 'justify-center px-0', isActive && 'active')}
               title={isSidebarCollapsed ? item.label : undefined}
             >
@@ -203,6 +212,9 @@ export default function Sidebar() {
             exit={{ opacity: 0 }}
             className="flex-shrink-0 p-4 border-t border-border/50 space-y-3"
           >
+            
+
+            {/* Storage */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5 text-text-muted">
@@ -218,6 +230,8 @@ export default function Sidebar() {
                 />
               </div>
             </div>
+
+            {/* Logout */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-text-muted">
                 <Zap size={10} />
