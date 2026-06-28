@@ -49,20 +49,25 @@ export default function AuthPage() {
   const handleRegister = async (data: RegisterData) => {
     setLoading(true)
     setError('')
-    const { error, data: signUpData } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: { 
-        data: { name: data.name },
-        emailRedirectTo: window.location.origin
-      },
-    })
-    if (error) {
-      setError(error.message)
-    } else if (signUpData.session) {
-      setSuccess('Account created! Redirecting...')
-    } else {
-      setSuccess('Account created! Please check your email to verify.')
+    try {
+      const { error, data: signUpData } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: { 
+          data: { name: data.name },
+          emailRedirectTo: window.location.origin
+        },
+      })
+      if (error) {
+        setError(error.message)
+      } else if (signUpData.session) {
+        setSuccess('Account created! Redirecting...')
+      } else {
+        setSuccess('Account created! Please check your email to verify.')
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.')
+      console.error('Signup error:', err)
     }
     setLoading(false)
   }
