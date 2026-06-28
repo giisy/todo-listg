@@ -61,13 +61,13 @@ export default function DashboardPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-2xs font-medium text-accent-blue uppercase tracking-widest">
-                  Good {getGreeting()}
+                  Good {getGreeting()} Friends
                 </span>
                 <span className="text-text-muted text-2xs">·</span>
                 <span className="text-2xs text-text-muted">{format(today, 'EEEE, MMMM d, yyyy')}</span>
               </div>
               <h2 className="text-2xl font-bold text-text-primary mb-2">
-                Hey, {settings.name} 👋
+                Hey, {settings.name} 
               </h2>
               <p className="text-sm text-text-secondary italic">"{quote}"</p>
               <div className="mt-4 flex items-center gap-3">
@@ -157,38 +157,15 @@ export default function DashboardPage() {
               )}
             </motion.div>
 
-            {/* Activity */}
+            {/* Analytics */}
             <motion.div variants={item} initial="initial" animate="animate" className="card p-5">
-              <SectionHeader icon={<Activity size={14} />} label="Recent Activity" />
-              {activity.length === 0 ? (
-                <p className="text-sm text-text-muted text-center py-6">No activity yet</p>
-              ) : (
-                <div className="mt-3 space-y-1">
-                  {activity.slice(0, 6).map(log => (
-                    <div key={log.id} className="flex items-start gap-3 py-2">
-                      <div className={cn(
-                        'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
-                        log.type === 'completed' && 'bg-accent-emerald/15 text-accent-emerald',
-                        log.type === 'created' && 'bg-accent-blue/15 text-accent-blue',
-                        log.type === 'deleted' && 'bg-accent-rose/15 text-accent-rose',
-                        log.type === 'updated' && 'bg-accent-amber/15 text-accent-amber',
-                      )}>
-                        {log.type === 'completed' && <CheckCircle2 size={12} />}
-                        {log.type === 'created' && <Plus size={12} />}
-                        {log.type === 'deleted' && <AlertTriangle size={12} />}
-                        {log.type === 'updated' && <TrendingUp size={12} />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-text-primary truncate">
-                          <span className="capitalize text-text-secondary">{log.type}</span>{' '}
-                          <span className="font-medium">"{log.taskTitle}"</span>
-                        </p>
-                        <p className="text-2xs text-text-muted">{format(new Date(log.timestamp), 'MMM d, h:mm a')}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <SectionHeader
+                icon={<TrendingUp size={14} />}
+                label="Weekly Progress"
+                action="Full Analytics"
+                onAction={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'analytics' })}
+              />
+              <WeeklyChart tasks={tasks} />
             </motion.div>
           </div>
 
@@ -237,6 +214,56 @@ export default function DashboardPage() {
               )}
             </motion.div>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function WeeklyChart({ tasks }: { tasks: Task[] }) {
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (6 - i))
+    const label = format(d, 'EEE')
+    const completed = tasks.filter(t =>
+      t.status === 'done' && t.completedAt &&
+      new Date(t.completedAt).toDateString() === d.toDateString()
+    ).length
+    const created = tasks.filter(t =>
+      new Date(t.createdAt).toDateString() === d.toDateString()
+    ).length
+    return { label, completed, created }
+  })
+
+  const max = Math.max(...days.map(d => Math.max(d.completed, d.created)), 1)
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-end gap-2 h-24">
+        {days.map((d, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+            <div className="w-full flex items-end gap-0.5 h-20">
+              <div
+                className="flex-1 bg-accent-blue/30 rounded-t-sm transition-all duration-500"
+                style={{ height: `${(d.created / max) * 100}%` }}
+              />
+              <div
+                className="flex-1 bg-accent-emerald/50 rounded-t-sm transition-all duration-500"
+                style={{ height: `${(d.completed / max) * 100}%` }}
+              />
+            </div>
+            <span className="text-2xs text-text-muted">{d.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-4 mt-3">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-sm bg-accent-blue/30" />
+          <span className="text-2xs text-text-muted">Created</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-sm bg-accent-emerald/50" />
+          <span className="text-2xs text-text-muted">Completed</span>
         </div>
       </div>
     </div>
