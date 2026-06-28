@@ -28,7 +28,7 @@ function AppContent() {
     if (profile?.name) {
       dispatch({ type: 'UPDATE_SETTINGS', payload: { name: profile.name } })
     }
-  }, [profile])
+  }, [profile?.name, dispatch])
 
   const renderPage = () => {
     switch (state.activePage) {
