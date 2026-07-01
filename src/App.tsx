@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { AppProvider, useApp } from '@/context/AppContext'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
+import { ToastProvider } from '@/context/ToastContext'
 import AppLayout from '@/layouts/AppLayout'
 import AuthPage from '@/pages/AuthPage'
 import DashboardPage from '@/pages/DashboardPage'
@@ -12,10 +13,13 @@ import NotesPage from '@/pages/NotesPage'
 import AnalyticsPage from '@/pages/AnalyticsPage'
 import PomodoroPage from '@/pages/PomodoroPage'
 import ProjectsPage from '@/pages/ProjectsPage'
+import CalendarPage from '@/pages/CalendarPage'
 import CategoriesPage from '@/pages/CategoriesPage'
 import RecentPage from '@/pages/RecentPage'
 import ProfilePage from '@/pages/ProfilePage'
 import SettingsPage from '@/pages/SettingsPage'
+import KeyboardShortcutsPage from '@/pages/KeyboardShortcutsPage'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import { useSupabaseSync } from '@/hooks/useSupabaseSync'
 import { Loader2 } from 'lucide-react'
 
@@ -45,6 +49,8 @@ function AppContent() {
       case 'pomodoro': return <PomodoroPage />
       case 'projects': return <ProjectsPage />
       case 'categories': return <CategoriesPage />
+      case 'calendar': return <CalendarPage />
+      case 'keyboardShortcuts': return <KeyboardShortcutsPage />
       default:
         return (
           <div className="h-full flex items-center justify-center">
@@ -68,7 +74,7 @@ function Root() {
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 size={24} className="animate-spin text-accent-blue" />
+          <Loader2 size={24} className="animate-spin text-[var(--accent-color)]" />
           <p className="text-xs text-text-muted">Loading TaskFlow...</p>
         </div>
       </div>
@@ -78,9 +84,13 @@ function Root() {
   if (!user) return <AuthPage />
 
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
+      </AppProvider>
+    </ErrorBoundary>
   )
 }
 

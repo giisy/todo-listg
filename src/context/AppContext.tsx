@@ -1,8 +1,9 @@
-import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react'
-import type { Task, Note, Category, Tag, ActivityLog, UserSettings, NavPage } from '@/types'
+import { createContext, useContext, useReducer, useEffect, useRef, type ReactNode } from 'react'
+import type { Task, Note, Category, Tag, ActivityLog, UserSettings, NavPage, SearchFilters } from '@/types'
 import { DEFAULT_CATEGORIES, DEFAULT_TAGS, STORAGE_KEYS } from '@/constants'
+import { generateId } from '@/utils/generateId'
 
-interface AppState {
+export interface AppState {
   tasks: Task[]
   notes: Note[]
   categories: Category[]
@@ -12,7 +13,11 @@ interface AppState {
   settings: UserSettings
   activePage: NavPage
   searchQuery: string
+  searchFilters: SearchFilters
   isSidebarCollapsed: boolean
+  showAdvancedSearch: boolean
+  showQuickAdd: boolean
+  focusMode: boolean
 }
 
 type AppAction =
@@ -23,19 +28,25 @@ type AppAction =
   | { type: 'TOGGLE_TASK'; payload: string }
   | { type: 'TOGGLE_FAVORITE'; payload: string }
   | { type: 'TOGGLE_PIN'; payload: string }
+  | { type: 'REORDER_TASKS'; payload: { sourceIndex: number; destinationIndex: number } }
+  | { type: 'RESET_RECURRING_TASKS'; payload: Task[] }
   | { type: 'ADD_NOTE'; payload: Note }
   | { type: 'UPDATE_NOTE'; payload: Note }
   | { type: 'DELETE_NOTE'; payload: string }
   | { type: 'ADD_CATEGORY'; payload: Category }
   | { type: 'SET_ACTIVE_PAGE'; payload: NavPage }
   | { type: 'SET_SEARCH'; payload: string }
+  | { type: 'SET_SEARCH_FILTERS'; payload: SearchFilters }
+  | { type: 'CLEAR_SEARCH_FILTERS' }
+  | { type: 'TOGGLE_ADVANCED_SEARCH' }
+  | { type: 'CLOSE_ADVANCED_SEARCH' }
+  | { type: 'TOGGLE_QUICK_ADD' }
+  | { type: 'CLOSE_QUICK_ADD' }
+  | { type: 'TOGGLE_FOCUS_MODE' }
   | { type: 'TOGGLE_SIDEBAR' }
+  | { type: 'TOGGLE_THEME' }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<UserSettings> }
   | { type: 'LOAD_STATE'; payload: Partial<AppState> }
-
-function generateId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-}
 
 function addActivity(state: AppState, log: Omit<ActivityLog, 'id' | 'timestamp'>): ActivityLog[] {
   const entry: ActivityLog = {
@@ -51,6 +62,9 @@ const defaultSettings: UserSettings = {
   pomodoroWork: 25,
   pomodoroBreak: 5,
   notifications: true,
+  accentColor: '#3B82F6',
+  firstDayOfWeek: 'monday',
+  theme: 'dark'| 'light'
 }
 
 const initialState: AppState = {
@@ -63,7 +77,11 @@ const initialState: AppState = {
   settings: defaultSettings,
   activePage: 'dashboard',
   searchQuery: '',
+  searchFilters: {},
   isSidebarCollapsed: false,
+  showAdvancedSearch: false,
+  showQuickAdd: false,
+  focusMode: false,
 }
 
 function reducer(state: AppState, action: AppAction): AppState {
@@ -74,15 +92,26 @@ function reducer(state: AppState, action: AppAction): AppState {
     case 'ADD_TASK':
       return {
         ...state,
-        tasks: [action.payload, ...state.tasks],
-        activity: addActivity(state, { type: 'created', taskId: action.payload.id, taskTitle: action.payload.title }),
+        tasks: [
+          { ...action.payload, order: Math.max(...state.tasks.map(t => t.order), 0) + 1 },
+          ...state.tasks,
+        ],
+        activity: addActivity(state, {
+          type: 'created',
+          taskId: action.payload.id,
+          taskTitle: action.payload.title,
+        }),
       }
 
     case 'UPDATE_TASK':
       return {
         ...state,
         tasks: state.tasks.map(t => t.id === action.payload.id ? action.payload : t),
-        activity: addActivity(state, { type: 'updated', taskId: action.payload.id, taskTitle: action.payload.title }),
+        activity: addActivity(state, {
+          type: 'updated',
+          taskId: action.payload.id,
+          taskTitle: action.payload.title,
+        }),
       }
 
     case 'TOGGLE_TASK': {
@@ -108,13 +137,17 @@ function reducer(state: AppState, action: AppAction): AppState {
     case 'TOGGLE_FAVORITE':
       return {
         ...state,
-        tasks: state.tasks.map(t => t.id === action.payload ? { ...t, isFavorite: !t.isFavorite } : t),
+        tasks: state.tasks.map(t =>
+          t.id === action.payload ? { ...t, isFavorite: !t.isFavorite } : t
+        ),
       }
 
     case 'TOGGLE_PIN':
       return {
         ...state,
-        tasks: state.tasks.map(t => t.id === action.payload ? { ...t, isPinned: !t.isPinned } : t),
+        tasks: state.tasks.map(t =>
+          t.id === action.payload ? { ...t, isPinned: !t.isPinned } : t
+        ),
       }
 
     case 'DELETE_TASK': {
@@ -124,7 +157,11 @@ function reducer(state: AppState, action: AppAction): AppState {
         ...state,
         tasks: state.tasks.filter(t => t.id !== action.payload),
         trash: [{ ...task, status: 'archived' }, ...state.trash],
-        activity: addActivity(state, { type: 'deleted', taskId: task.id, taskTitle: task.title }),
+        activity: addActivity(state, {
+          type: 'deleted',
+          taskId: task.id,
+          taskTitle: task.title,
+        }),
       }
     }
 
@@ -140,20 +177,76 @@ function reducer(state: AppState, action: AppAction): AppState {
 
     case 'ADD_NOTE':
       return { ...state, notes: [action.payload, ...state.notes] }
+
     case 'UPDATE_NOTE':
-      return { ...state, notes: state.notes.map(n => n.id === action.payload.id ? action.payload : n) }
+      return {
+        ...state,
+        notes: state.notes.map(n => n.id === action.payload.id ? action.payload : n),
+      }
+
     case 'DELETE_NOTE':
       return { ...state, notes: state.notes.filter(n => n.id !== action.payload) }
+
+    case 'REORDER_TASKS': {
+      const { sourceIndex, destinationIndex } = action.payload
+      if (sourceIndex === destinationIndex) return state
+      const tasks = [...state.tasks]
+      const [removed] = tasks.splice(sourceIndex, 1)
+      tasks.splice(destinationIndex, 0, removed)
+      return { ...state, tasks }
+    }
+
+    case 'RESET_RECURRING_TASKS':
+      return {
+        ...state,
+        tasks: state.tasks.map(t => {
+          const resetTask = action.payload.find(r => r.id === t.id)
+          return resetTask || t
+        }),
+      }
 
     case 'ADD_CATEGORY':
       return { ...state, categories: [...state.categories, action.payload] }
 
     case 'SET_ACTIVE_PAGE':
       return { ...state, activePage: action.payload }
+
     case 'SET_SEARCH':
       return { ...state, searchQuery: action.payload }
+
+    case 'SET_SEARCH_FILTERS':
+      return { ...state, searchFilters: action.payload }
+
+    case 'CLEAR_SEARCH_FILTERS':
+      return { ...state, searchFilters: {} }
+
+    case 'TOGGLE_ADVANCED_SEARCH':
+      return { ...state, showAdvancedSearch: !state.showAdvancedSearch }
+
+    case 'CLOSE_ADVANCED_SEARCH':
+      return { ...state, showAdvancedSearch: false }
+
+    case 'TOGGLE_QUICK_ADD':
+      return { ...state, showQuickAdd: !state.showQuickAdd }
+
+    case 'CLOSE_QUICK_ADD':
+      return { ...state, showQuickAdd: false }
+
+    case 'TOGGLE_FOCUS_MODE':
+      return { ...state, focusMode: !state.focusMode }
+
     case 'TOGGLE_SIDEBAR':
       return { ...state, isSidebarCollapsed: !state.isSidebarCollapsed }
+
+    case 'TOGGLE_THEME':
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          theme: state.settings.theme === 'dark' ? 'light' : 'dark',
+        },
+      }
+
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } }
 
@@ -165,28 +258,60 @@ function reducer(state: AppState, action: AppAction): AppState {
 const AppContext = createContext<{
   state: AppState
   dispatch: React.Dispatch<AppAction>
-  generateId: () => string
+  generateId: typeof generateId
 } | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
+  const lastResetCheck = useRef<string | null>(null)
 
+  // Reset recurring tasks saat hari berganti
   useEffect(() => {
-    const loaded: Partial<AppState> = {}
-    const keys = ['CATEGORIES', 'TRASH'] as const
-    keys.forEach(key => {
-      const raw = localStorage.getItem(STORAGE_KEYS[key])
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw)
-          const stateKey = key.toLowerCase() as keyof AppState
-          ;(loaded as Record<string, unknown>)[stateKey] = parsed
-        } catch { /* ignore */ }
+    const todayStr = new Date().toDateString()
+    if (lastResetCheck.current === todayStr) return
+    if (state.tasks.length === 0) return
+
+    const now = new Date()
+    const toReset: Task[] = []
+
+    state.tasks.forEach(task => {
+      if (task.repeat === 'none' || task.status !== 'done' || !task.completedAt) return
+
+      const completed = new Date(task.completedAt)
+      let shouldReset = false
+
+      if (task.repeat === 'daily') {
+        shouldReset = completed.toDateString() !== todayStr
+      } else if (task.repeat === 'weekly') {
+        const diffDays = Math.floor(
+          (now.getTime() - completed.getTime()) / (1000 * 60 * 60 * 24)
+        )
+        shouldReset = diffDays >= 7
+      } else if (task.repeat === 'monthly') {
+        shouldReset =
+          completed.getMonth() !== now.getMonth() ||
+          completed.getFullYear() !== now.getFullYear()
+      }
+
+      if (shouldReset) {
+        toReset.push({
+          ...task,
+          status: 'todo',
+          progress: 0,
+          completedAt: undefined,
+          updatedAt: new Date().toISOString(),
+        })
       }
     })
-    if (Object.keys(loaded).length) dispatch({ type: 'LOAD_STATE', payload: loaded })
-  }, [])
 
+    if (toReset.length > 0) {
+      dispatch({ type: 'RESET_RECURRING_TASKS', payload: toReset })
+    }
+
+    lastResetCheck.current = todayStr
+  }, [state.tasks])
+
+  // Sync ke localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(state.tasks))
     localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(state.notes))
@@ -195,6 +320,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(state.settings))
     localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(state.trash))
   }, [state.tasks, state.notes, state.categories, state.activity, state.settings, state.trash])
+
+  // Apply accent color ke CSS variables
+  useEffect(() => {
+    document.body.style.setProperty('--accent-color', state.settings.accentColor)
+    const dimmedColor = adjustBrightness(state.settings.accentColor, -0.15)
+    const glowColor = hexToRgba(state.settings.accentColor, 0.15)
+    document.body.style.setProperty('--accent-color-dim', dimmedColor)
+    document.body.style.setProperty('--accent-color-glow', glowColor)
+  }, [state.settings.accentColor])
+
+  // Apply theme ke <html>
+  useEffect(() => {
+    document.documentElement.classList.toggle('light', state.settings.theme === 'light')
+    document.documentElement.classList.toggle('dark', state.settings.theme === 'dark')
+  }, [state.settings.theme])
+
+  function hexToRgba(hex: string, alpha: number): string {
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    return `rgba(${r},${g},${b},${alpha})`
+  }
+
+  function adjustBrightness(hex: string, percent: number): string {
+    const r = Math.max(0, Math.min(255, parseInt(hex.slice(1, 3), 16) * (1 + percent)))
+    const g = Math.max(0, Math.min(255, parseInt(hex.slice(3, 5), 16) * (1 + percent)))
+    const b = Math.max(0, Math.min(255, parseInt(hex.slice(5, 7), 16) * (1 + percent)))
+    return `#${Math.round(r).toString(16).padStart(2, '0')}${Math.round(g).toString(16).padStart(2, '0')}${Math.round(b).toString(16).padStart(2, '0')}`
+  }
 
   return (
     <AppContext.Provider value={{ state, dispatch, generateId }}>

@@ -1,7 +1,7 @@
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'archived'
 export type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly'
-export type NavPage = 'dashboard' | 'today' | 'upcoming' | 'projects' | 'important' | 'categories' | 'notes' | 'pomodoro' | 'analytics' | 'trash' | 'recent' | 'profile' | 'settings'
+export type NavPage = 'dashboard' | 'today' | 'upcoming' | 'projects' | 'important' | 'categories' | 'notes' | 'pomodoro' | 'analytics' | 'trash' | 'recent' | 'profile' | 'settings' | 'calendar' | 'keyboardShortcuts'
 
 export interface Tag {
   id: string
@@ -37,6 +37,7 @@ export interface Task {
   isFavorite: boolean
   isPinned: boolean
   progress: number
+  order: number
   createdAt: string
   updatedAt: string
   completedAt?: string
@@ -58,6 +59,9 @@ export interface UserSettings {
   pomodoroWork: number
   pomodoroBreak: number
   notifications: boolean
+  accentColor: string
+  firstDayOfWeek: 'monday' | 'sunday'
+  theme: 'dark' | 'light'
 }
 
 export interface ActivityLog {
@@ -66,4 +70,13 @@ export interface ActivityLog {
   taskId: string
   taskTitle: string
   timestamp: string
+}
+
+export interface SearchFilters {
+  priority?: Priority | 'all'
+  status?: TaskStatus | 'all'
+  categoryId?: string | 'all'
+  dateFrom?: string
+  dateTo?: string
+  tags?: string[]
 }

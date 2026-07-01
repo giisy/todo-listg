@@ -132,7 +132,7 @@ export const insertNote = async (userId: string, note: Note) => {
     created_at: note.createdAt,
     updated_at: note.updatedAt,
   })
-  if (error) throw error
+  if (error && error.code !== '23505') throw error
 }
 
 export const updateNote = async (userId: string, note: Note) => {

@@ -1,11 +1,17 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Bell, Moon, X, Command, ChevronDown, Menu, User, LogOut, Settings } from 'lucide-react'
+import {
+  Search, Bell, Moon, Sun, X, Command, ChevronDown,
+  Menu, User, LogOut, Settings, Keyboard, Filter, Maximize2,
+} from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/services/supabase'
+import { useGlobalShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { cn } from '@/utils/cn'
 import { format } from 'date-fns'
+import { QuickAddButton } from '@/components/QuickAddModal'
+import AdvancedSearchModal from '@/components/AdvancedSearchModal'
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview & insights' },
@@ -17,7 +23,11 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   notes: { title: 'Notes', subtitle: 'Quick notes & ideas' },
   pomodoro: { title: 'Pomodoro', subtitle: 'Focus timer' },
   analytics: { title: 'Analytics', subtitle: 'Track your productivity' },
+  calendar: { title: 'Calendar', subtitle: 'View tasks by date' },
+  recent: { title: 'Recent Activity', subtitle: 'Your latest actions' },
+  profile: { title: 'Profile', subtitle: 'Your account information' },
   settings: { title: 'Settings', subtitle: 'Preferences & configuration' },
+  keyboardShortcuts: { title: 'Keyboard Shortcuts', subtitle: 'Quick commands' },
   trash: { title: 'Trash', subtitle: 'Deleted tasks' },
 }
 
@@ -32,15 +42,16 @@ export default function Topbar({ onMenuClick }: Props) {
   const [showMobileSearch, setShowMobileSearch] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
 
+  useGlobalShortcuts()
+
   const pageInfo = PAGE_TITLES[state.activePage] || PAGE_TITLES.dashboard
+  const isLight = state.settings.theme === 'light'
 
   return (
-    <header className="flex-shrink-0 h-14 flex items-center px-4 lg:px-6 gap-3 border-b border-border/50 bg-bg-primary/80 backdrop-blur-sm">
+    // fix: tambah relative z-30 supaya dropdown tidak tertimpa konten di bawah
+    <header className="relative z-30 flex-shrink-0 h-14 flex items-center px-4 lg:px-6 gap-3 border-b border-border/50 bg-bg-primary/80 backdrop-blur-sm">
       {/* Mobile menu button */}
-      <button
-        onClick={onMenuClick}
-        className="btn-icon lg:hidden flex-shrink-0"
-      >
+      <button onClick={onMenuClick} className="btn-icon lg:hidden flex-shrink-0">
         <Menu size={18} />
       </button>
 
@@ -54,8 +65,12 @@ export default function Topbar({ onMenuClick }: Props) {
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.15 }}
           >
-            <h1 className="text-sm font-semibold text-text-primary leading-tight truncate">{pageInfo.title}</h1>
-            <p className="text-xs text-text-muted leading-tight hidden sm:block">{pageInfo.subtitle}</p>
+            <h1 className="text-sm font-semibold text-text-primary leading-tight truncate">
+              {pageInfo.title}
+            </h1>
+            <p className="text-xs text-text-muted leading-tight hidden sm:block">
+              {pageInfo.subtitle}
+            </p>
           </motion.div>
         </AnimatePresence>
       </div>
@@ -80,7 +95,10 @@ export default function Topbar({ onMenuClick }: Props) {
           className="bg-transparent text-sm text-text-primary placeholder:text-text-muted flex-1 min-w-0 focus:outline-none"
         />
         {state.searchQuery ? (
-          <button onClick={() => dispatch({ type: 'SET_SEARCH', payload: '' })} className="text-text-muted hover:text-text-primary">
+          <button
+            onClick={() => dispatch({ type: 'SET_SEARCH', payload: '' })}
+            className="text-text-muted hover:text-text-primary"
+          >
             <X size={12} />
           </button>
         ) : (
@@ -89,6 +107,16 @@ export default function Topbar({ onMenuClick }: Props) {
             <span className="text-2xs">K</span>
           </div>
         )}
+        <button
+          onClick={() => dispatch({ type: 'TOGGLE_ADVANCED_SEARCH' })}
+          className={cn(
+            'text-text-muted hover:text-text-primary transition-colors',
+            Object.keys(state.searchFilters).length > 0 && 'text-accent-blue'
+          )}
+          title="Advanced Search"
+        >
+          <Filter size={13} />
+        </button>
       </motion.div>
 
       {/* Actions */}
@@ -101,25 +129,71 @@ export default function Topbar({ onMenuClick }: Props) {
           <Search size={15} />
         </button>
 
+        {/* Bell — dekoratif, belum ada fitur notif klik */}
         <button className="btn-icon relative hidden sm:flex">
           <Bell size={15} />
-          <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-accent-blue rounded-full" />
+          <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[var(--accent-color)] rounded-full" />
         </button>
 
-        <button className="btn-icon hidden sm:flex">
-          <Moon size={15} />
+        {/* Dark / Light mode toggle — fix: pisah dari Bell, tambah onClick */}
+        <button
+          onClick={() => dispatch({ type: 'TOGGLE_THEME' })}
+          className="btn-icon hidden sm:flex"
+          title={isLight ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+        >
+          {isLight ? <Sun size={15} /> : <Moon size={15} />}
         </button>
 
+        <QuickAddButton />
+
+        <button
+          onClick={() => dispatch({ type: 'TOGGLE_FOCUS_MODE' })}
+          className={cn(
+            'btn-icon hidden sm:flex relative',
+            state.focusMode && 'text-accent-blue bg-accent-blue/10'
+          )}
+          title="Focus Mode (Cmd+Shift+F)"
+        >
+          <Maximize2 size={15} />
+          {state.focusMode && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-1 -right-1 w-2 h-2 bg-accent-emerald rounded-full"
+            />
+          )}
+        </button>
+
+        <button
+          onClick={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'keyboardShortcuts' })}
+          className="btn-icon hidden sm:flex"
+          aria-label="Keyboard shortcuts"
+        >
+          <Keyboard size={15} />
+        </button>
+
+        {/* Profile dropdown */}
         <div className="relative ml-1">
           <button
             onClick={() => setShowProfile(!showProfile)}
             className="flex items-center gap-1.5 pl-2 pr-2 lg:pr-3 py-1.5 rounded-md hover:bg-white/5 transition-all duration-150"
           >
-            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-accent-blue to-accent-purple flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+            <div
+              className="w-6 h-6 rounded-md flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+              style={{ background: `linear-gradient(to bottom right, var(--accent-color), var(--accent-color-dim))` }}
+            >
               {state.settings.name.charAt(0).toUpperCase()}
             </div>
-            <span className="text-xs font-medium text-text-primary hidden lg:block">{state.settings.name}</span>
-            <ChevronDown size={12} className={cn('text-text-muted hidden lg:block transition-transform duration-200', showProfile && 'rotate-180')} />
+            <span className="text-xs font-medium text-text-primary hidden lg:block">
+              {state.settings.name}
+            </span>
+            <ChevronDown
+              size={12}
+              className={cn(
+                'text-text-muted hidden lg:block transition-transform duration-200',
+                showProfile && 'rotate-180'
+              )}
+            />
           </button>
 
           <AnimatePresence>
@@ -133,13 +207,13 @@ export default function Topbar({ onMenuClick }: Props) {
                   transition={{ duration: 0.15 }}
                   className="absolute right-0 top-10 z-20 w-48 bg-bg-card border border-border rounded-lg shadow-elevated overflow-hidden"
                 >
-                  {/* User info */}
                   <div className="px-4 py-3 border-b border-border/50">
-                    <p className="text-xs font-semibold text-text-primary truncate">{state.settings.name}</p>
+                    <p className="text-xs font-semibold text-text-primary truncate">
+                      {state.settings.name}
+                    </p>
                     <p className="text-2xs text-text-muted truncate">{user?.email}</p>
                   </div>
 
-                  {/* Menu items */}
                   <div className="py-1">
                     <button
                       onClick={() => {
@@ -207,6 +281,9 @@ export default function Topbar({ onMenuClick }: Props) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Advanced Search Modal */}
+      <AdvancedSearchModal />
     </header>
   )
 }

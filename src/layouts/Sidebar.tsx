@@ -1,25 +1,27 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  LayoutDashboard, CalendarDays, Calendar, FolderOpen,
-  Star, Tag, BookOpen, Timer, BarChart3, Settings,
+  LayoutDashboard, CalendarDays, Calendar, CalendarRange, FolderOpen,
+  Star, Tag, BookOpen, Timer, BarChart3,
   LogOut, ChevronLeft, ChevronRight, HardDrive, Trash2,
-  Plus, Zap, CheckCircle2, AlertTriangle, TrendingUp, Activity,
+  Plus, Zap, Activity,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
+import { cn } from '@/utils/cn'
 import { supabase } from '@/services/supabase'
 import type { NavPage } from '@/types'
-import { cn } from '@/utils/cn'
 
 interface NavItem {
   id: NavPage
   label: string
-  icon: React.ElementType
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
 }
 
+// navItems - pakai Calendar biasa
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'today', label: 'Today', icon: CalendarDays },
   { id: 'upcoming', label: 'Upcoming', icon: Calendar },
+  { id: 'calendar', label: 'Calendar', icon: CalendarRange },
   { id: 'projects', label: 'Projects', icon: FolderOpen },
   { id: 'important', label: 'Important', icon: Star },
   { id: 'categories', label: 'Categories', icon: Tag },
@@ -32,6 +34,7 @@ const bottomItems: NavItem[] = [
   { id: 'recent', label: 'Recent', icon: Activity },
   { id: 'trash', label: 'Trash', icon: Trash2 },
 ]
+
 interface SidebarProps {
   onClose?: () => void
 }
@@ -174,7 +177,6 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
         <div className="divider" />
 
-
         {bottomItems.map((item) => {
           const Icon = item.icon
           const isActive = activePage === item.id
@@ -212,8 +214,6 @@ export default function Sidebar({ onClose }: SidebarProps) {
             exit={{ opacity: 0 }}
             className="flex-shrink-0 p-4 border-t border-border/50 space-y-3"
           >
-            
-
             {/* Storage */}
             <div>
               <div className="flex items-center justify-between mb-1.5">

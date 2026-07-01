@@ -41,3 +41,5 @@ export const STORAGE_KEYS = {
   SETTINGS: 'taskflow_settings',
   TRASH: 'taskflow_trash',
 } as const
+
+export const APP_VERSION = '1.0.0'

@@ -1,16 +1,15 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { format, isToday, isPast, isFuture, isTomorrow } from 'date-fns'
+import { format, isToday, isPast, isTomorrow } from 'date-fns'
 import {
   CheckCircle2, Circle, Clock, AlertTriangle, TrendingUp,
-  Star, Pin, Flame, CalendarDays, Activity, ChevronRight,
+  Star, Pin, Flame, CalendarDays, ChevronRight,
   Plus, Target, Zap,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { MOTIVATIONAL_QUOTES, PRIORITY_CONFIG } from '@/constants'
 import { cn } from '@/utils/cn'
 import type { Task } from '@/types'
-import MiniCalendar from '@/components/common/MiniCalendar'
 
 const item = {
   initial: { opacity: 0, y: 12 },
@@ -26,7 +25,7 @@ function getGreeting() {
 
 export default function DashboardPage() {
   const { state, dispatch } = useApp()
-  const { tasks, activity, settings } = state
+  const { tasks, settings } = state
 
   const today = new Date()
   const quote = MOTIVATIONAL_QUOTES[today.getDate() % MOTIVATIONAL_QUOTES.length]
@@ -40,11 +39,15 @@ export default function DashboardPage() {
     return { todayTasks, completed, pending, overdue, progress }
   }, [tasks])
 
-  const pinnedTasks = tasks.filter(t => t.isPinned && t.status !== 'done').slice(0, 3)
+  const pinnedTasks = tasks
+    .filter(t => t.isPinned && t.status !== 'done' && t.status !== 'archived')
+    .slice(0, 3)
+
   const recentTasks = tasks
     .filter(t => t.status !== 'archived')
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5)
+
   const upcomingDeadlines = tasks
     .filter(t => t.dueDate && t.status !== 'done' && t.status !== 'archived')
     .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
@@ -67,7 +70,7 @@ export default function DashboardPage() {
                 <span className="text-2xs text-text-muted">{format(today, 'EEEE, MMMM d, yyyy')}</span>
               </div>
               <h2 className="text-2xl font-bold text-text-primary mb-2">
-                Hey, {settings.name} 
+                Hey, {settings.name}
               </h2>
               <p className="text-sm text-text-secondary italic">"{quote}"</p>
               <div className="mt-4 flex items-center gap-3">
@@ -121,9 +124,16 @@ export default function DashboardPage() {
             {/* Pinned */}
             {pinnedTasks.length > 0 && (
               <motion.div variants={item} initial="initial" animate="animate" className="card p-5">
-                <SectionHeader icon={<Pin size={14} />} label="Pinned" action="View all" onAction={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'important' })} />
+                <SectionHeader
+                  icon={<Pin size={14} />}
+                  label="Pinned"
+                  action="View all"
+                  onAction={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'important' })}
+                />
                 <div className="mt-3 space-y-1">
-                  {pinnedTasks.map(task => <TaskRow key={task.id} task={task} />)}
+                  {pinnedTasks.map(task => (
+                    <TaskRow key={task.id} task={task} />
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -152,12 +162,14 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="mt-3 space-y-1">
-                  {recentTasks.map(task => <TaskRow key={task.id} task={task} />)}
+                  {recentTasks.map(task => (
+                    <TaskRow key={task.id} task={task} />
+                  ))}
                 </div>
               )}
             </motion.div>
 
-            {/* Analytics */}
+            {/* Weekly Chart */}
             <motion.div variants={item} initial="initial" animate="animate" className="card p-5">
               <SectionHeader
                 icon={<TrendingUp size={14} />}
@@ -171,13 +183,6 @@ export default function DashboardPage() {
 
           {/* Right panel */}
           <div className="space-y-5">
-            <motion.div variants={item} initial="initial" animate="animate" className="card p-5">
-              <SectionHeader icon={<CalendarDays size={14} />} label="Calendar" />
-              <div className="mt-3">
-                <MiniCalendar tasks={tasks} />
-              </div>
-            </motion.div>
-
             <motion.div variants={item} initial="initial" animate="animate" className="card p-5">
               <SectionHeader
                 icon={<Clock size={14} />}
@@ -324,10 +329,7 @@ function TaskRow({ task }: { task: Task }) {
   const { dispatch } = useApp()
   const isDone = task.status === 'done'
   return (
-    <motion.div
-      whileHover={{ x: 2 }}
-      className="flex items-center gap-3 py-2 px-3 rounded-md hover:bg-white/3 transition-all duration-150 group"
-    >
+    <div className="flex items-center gap-3 py-2 px-3 rounded-md hover:bg-white/5 transition-all duration-150 group">
       <button
         onClick={() => dispatch({ type: 'TOGGLE_TASK', payload: task.id })}
         className="flex-shrink-0 hover:scale-110 transition-transform"
@@ -349,6 +351,6 @@ function TaskRow({ task }: { task: Task }) {
         <span className="priority-dot" style={{ background: PRIORITY_CONFIG[task.priority].dot }} />
         {task.isFavorite && <Star size={11} className="text-accent-amber fill-current" />}
       </div>
-    </motion.div>
+    </div>
   )
 }
