@@ -1,17 +1,14 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { format, subDays, isToday, isSameDay } from 'date-fns'
-import {
-  CheckCircle2, Clock, AlertTriangle, TrendingUp,
-  Target, Flame, Award, BarChart3,
-} from 'lucide-react'
+import { CheckCircle2, Clock, AlertTriangle, TrendingUp, Target, Flame, Award, BarChart3 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { PRIORITY_CONFIG } from '@/constants'
 import { cn } from '@/utils/cn'
 
 export default function AnalyticsPage() {
   const { state } = useApp()
-  const { tasks } = state
+  const { tasks, activity } = state  // tambah activity
 
   const stats = useMemo(() => {
     const total = tasks.length
@@ -23,15 +20,16 @@ export default function AnalyticsPage() {
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
     const favorites = tasks.filter(t => t.isFavorite).length
 
-    // Last 7 days activity
+    // Fix: pakai activity logs untuk last 7 days — tidak hilang saat task repeat reset
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = subDays(new Date(), 6 - i)
       const created = tasks.filter(t => isSameDay(new Date(t.createdAt), date)).length
-      const done = tasks.filter(t => t.completedAt && isSameDay(new Date(t.completedAt), date)).length
+      const done = activity.filter(a =>
+        a.type === 'completed' && isSameDay(new Date(a.timestamp), date)
+      ).length
       return { date, created, done }
     })
 
-    // Priority breakdown
     const byPriority = {
       urgent: tasks.filter(t => t.priority === 'urgent').length,
       high: tasks.filter(t => t.priority === 'high').length,
@@ -39,55 +37,44 @@ export default function AnalyticsPage() {
       low: tasks.filter(t => t.priority === 'low').length,
     }
 
-    // Category breakdown
     const byCategory: Record<string, number> = {}
     tasks.forEach(t => {
-      if (t.categoryId) {
-        byCategory[t.categoryId] = (byCategory[t.categoryId] || 0) + 1
-      }
+      if (t.categoryId) byCategory[t.categoryId] = (byCategory[t.categoryId] || 0) + 1
     })
 
-    // Streak - consecutive days with completed tasks
+    // Fix: pakai activity logs untuk streak juga
     let streak = 0
     for (let i = 0; i < 30; i++) {
       const date = subDays(new Date(), i)
-      const hasCompleted = tasks.some(t => t.completedAt && isSameDay(new Date(t.completedAt), date))
+      const hasCompleted = activity.some(a =>
+        a.type === 'completed' && isSameDay(new Date(a.timestamp), date)
+      )
       if (hasCompleted) streak++
       else break
     }
 
     return { total, completed, pending, overdue, completionRate, favorites, last7Days, byPriority, byCategory, streak }
-  }, [tasks])
+  }, [tasks, activity])
 
   const maxBar = Math.max(...stats.last7Days.map(d => Math.max(d.created, d.done)), 1)
 
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-6 max-w-5xl mx-auto space-y-6">
-
-        {/* Header */}
         <div>
           <h2 className="text-xl font-bold text-text-primary">Analytics</h2>
           <p className="text-xs text-text-muted mt-0.5">Your productivity overview</p>
         </div>
 
-        {/* Top stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Tasks', value: stats.total, icon: <Target size={16} />, color: 'text-accent-blue', bg: 'bg-accent-blue/10' },
+            { label: 'Total Tasks', value: stats.total, icon: <Target size={16} />, color: 'text-[var(--accent-color)]', bg: 'bg-[var(--accent-color)]/10' },
             { label: 'Completed', value: stats.completed, icon: <CheckCircle2 size={16} />, color: 'text-accent-emerald', bg: 'bg-accent-emerald/10' },
             { label: 'Completion Rate', value: `${stats.completionRate}%`, icon: <TrendingUp size={16} />, color: 'text-accent-purple', bg: 'bg-accent-purple/10' },
             { label: 'Current Streak', value: `${stats.streak}d`, icon: <Flame size={16} />, color: 'text-accent-amber', bg: 'bg-accent-amber/10' },
           ].map(s => (
-            <motion.div
-              key={s.label}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="stat-card"
-            >
-              <div className={cn('w-9 h-9 rounded-md flex items-center justify-center', s.bg, s.color)}>
-                {s.icon}
-              </div>
+            <motion.div key={s.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="stat-card">
+              <div className={cn('w-9 h-9 rounded-md flex items-center justify-center', s.bg, s.color)}>{s.icon}</div>
               <div>
                 <div className="text-2xl font-bold text-text-primary">{s.value}</div>
                 <div className="text-xs text-text-secondary mt-0.5">{s.label}</div>
@@ -97,48 +84,35 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          {/* Activity chart */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="lg:col-span-2 card p-5"
-          >
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-2 card p-5">
             <div className="flex items-center gap-2 mb-5">
               <BarChart3 size={14} className="text-text-secondary" />
               <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Last 7 Days</span>
             </div>
-
             <div className="flex items-end justify-between gap-2 h-36">
               {stats.last7Days.map((day, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full flex items-end justify-center gap-0.5 flex-1">
-                    {/* Created bar */}
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${(day.created / maxBar) * 100}%` }}
                       transition={{ duration: 0.6, delay: i * 0.05, ease: 'easeOut' }}
-                      className="flex-1 bg-accent-blue/30 rounded-t-sm min-h-[2px]"
-                      title={`${day.created} created`}
+                      className="flex-1 bg-[var(--accent-color)]/30 rounded-t-sm min-h-[2px]"
                     />
-                    {/* Done bar */}
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${(day.done / maxBar) * 100}%` }}
                       transition={{ duration: 0.6, delay: i * 0.05 + 0.1, ease: 'easeOut' }}
                       className="flex-1 bg-accent-emerald/60 rounded-t-sm min-h-[2px]"
-                      title={`${day.done} completed`}
                     />
                   </div>
                   <span className="text-2xs text-text-muted">{format(day.date, 'EEE')}</span>
                 </div>
               ))}
             </div>
-
             <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border/30">
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-sm bg-accent-blue/30" />
+                <span className="w-3 h-3 rounded-sm bg-[var(--accent-color)]/30" />
                 <span className="text-2xs text-text-muted">Created</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -148,18 +122,11 @@ export default function AnalyticsPage() {
             </div>
           </motion.div>
 
-          {/* Priority breakdown */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="card p-5"
-          >
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="card p-5">
             <div className="flex items-center gap-2 mb-5">
               <Target size={14} className="text-text-secondary" />
               <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">By Priority</span>
             </div>
-
             <div className="space-y-3">
               {(Object.entries(stats.byPriority) as [keyof typeof stats.byPriority, number][]).map(([key, count]) => {
                 const prio = PRIORITY_CONFIG[key]
@@ -177,13 +144,7 @@ export default function AnalyticsPage() {
                       </div>
                     </div>
                     <div className="h-1.5 bg-border/50 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.8, ease: 'easeOut' }}
-                        className="h-full rounded-full"
-                        style={{ background: prio.dot }}
-                      />
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, ease: 'easeOut' }} className="h-full rounded-full" style={{ background: prio.dot }} />
                     </div>
                   </div>
                 )
@@ -192,7 +153,6 @@ export default function AnalyticsPage() {
           </motion.div>
         </div>
 
-        {/* Summary cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card p-5">
             <div className="flex items-center gap-2 mb-3">
@@ -202,7 +162,6 @@ export default function AnalyticsPage() {
             <div className="text-3xl font-bold text-text-primary">{stats.pending}</div>
             <p className="text-xs text-text-muted mt-1">tasks still to do</p>
           </motion.div>
-
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="card p-5">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle size={14} className="text-accent-rose" />
@@ -211,7 +170,6 @@ export default function AnalyticsPage() {
             <div className="text-3xl font-bold text-text-primary">{stats.overdue}</div>
             <p className="text-xs text-text-muted mt-1">tasks past deadline</p>
           </motion.div>
-
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card p-5">
             <div className="flex items-center gap-2 mb-3">
               <Award size={14} className="text-accent-purple" />
@@ -221,7 +179,6 @@ export default function AnalyticsPage() {
             <p className="text-xs text-text-muted mt-1">starred tasks</p>
           </motion.div>
         </div>
-
       </div>
     </div>
   )

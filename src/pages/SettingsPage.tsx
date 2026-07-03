@@ -231,19 +231,27 @@ export default function SettingsPage() {
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Accent Color</span>
           </div>
 
-          <div className="grid grid-cols-5 gap-2">
-            {['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'].map((color) => (
-              <button
-                key={color}
-                onClick={() => setAccentColor(color)}
-                className={cn(
-                  'w-full aspect-square rounded-md border-2 transition-all duration-200',
-                  accentColor === color ? 'border-white scale-110' : 'border-border hover:scale-105'
-                )}
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
+          <div className="grid grid-cols-6 gap-2">
+  {[
+    { color: '#3B82F6', label: 'Blue' },
+    { color: '#EF4444', label: 'Red' },
+    { color: '#1A1A1A', label: 'Black' },
+    { color: '#F9FAFB', label: 'White' },
+    { color: '#EAB308', label: 'Yellow' },
+    { color: '#4B5320', label: 'Army Green' },
+  ].map(({ color, label }) => (
+    <button
+      key={color}
+      onClick={() => setAccentColor(color)}
+      title={label}
+      className={cn(
+        'w-full aspect-square rounded-md border-2 transition-all duration-200',
+        accentColor === color ? 'border-white scale-110' : 'border-border hover:scale-105'
+      )}
+      style={{ backgroundColor: color }}
+    />
+  ))}
+</div>
         </motion.div>
 
         {/* First Day of Week */}

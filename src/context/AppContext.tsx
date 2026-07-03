@@ -18,6 +18,8 @@ export interface AppState {
   showAdvancedSearch: boolean
   showQuickAdd: boolean
   focusMode: boolean
+  xp: number
+  level: number
 }
 
 type AppAction =
@@ -64,7 +66,7 @@ const defaultSettings: UserSettings = {
   notifications: true,
   accentColor: '#3B82F6',
   firstDayOfWeek: 'monday',
-  theme: 'dark'| 'light'
+  theme: 'dark',
 }
 
 const initialState: AppState = {
@@ -82,6 +84,8 @@ const initialState: AppState = {
   showAdvancedSearch: false,
   showQuickAdd: false,
   focusMode: false,
+  xp: 0,
+  level: 1,
 }
 
 function reducer(state: AppState, action: AppAction): AppState {
@@ -96,22 +100,14 @@ function reducer(state: AppState, action: AppAction): AppState {
           { ...action.payload, order: Math.max(...state.tasks.map(t => t.order), 0) + 1 },
           ...state.tasks,
         ],
-        activity: addActivity(state, {
-          type: 'created',
-          taskId: action.payload.id,
-          taskTitle: action.payload.title,
-        }),
+        activity: addActivity(state, { type: 'created', taskId: action.payload.id, taskTitle: action.payload.title }),
       }
 
     case 'UPDATE_TASK':
       return {
         ...state,
         tasks: state.tasks.map(t => t.id === action.payload.id ? action.payload : t),
-        activity: addActivity(state, {
-          type: 'updated',
-          taskId: action.payload.id,
-          taskTitle: action.payload.title,
-        }),
+        activity: addActivity(state, { type: 'updated', taskId: action.payload.id, taskTitle: action.payload.title }),
       }
 
     case 'TOGGLE_TASK': {
@@ -125,30 +121,25 @@ function reducer(state: AppState, action: AppAction): AppState {
         completedAt: done ? new Date().toISOString() : undefined,
         updatedAt: new Date().toISOString(),
       }
+      // Award +10 XP when completing a task
+      const newXp = done ? state.xp + 10 : state.xp
+      const newLevel = Math.floor(newXp / 100) + 1
       return {
         ...state,
         tasks: state.tasks.map(t => t.id === action.payload ? updated : t),
         activity: done
           ? addActivity(state, { type: 'completed', taskId: task.id, taskTitle: task.title })
           : state.activity,
+        xp: newXp,
+        level: newLevel,
       }
     }
 
     case 'TOGGLE_FAVORITE':
-      return {
-        ...state,
-        tasks: state.tasks.map(t =>
-          t.id === action.payload ? { ...t, isFavorite: !t.isFavorite } : t
-        ),
-      }
+      return { ...state, tasks: state.tasks.map(t => t.id === action.payload ? { ...t, isFavorite: !t.isFavorite } : t) }
 
     case 'TOGGLE_PIN':
-      return {
-        ...state,
-        tasks: state.tasks.map(t =>
-          t.id === action.payload ? { ...t, isPinned: !t.isPinned } : t
-        ),
-      }
+      return { ...state, tasks: state.tasks.map(t => t.id === action.payload ? { ...t, isPinned: !t.isPinned } : t) }
 
     case 'DELETE_TASK': {
       const task = state.tasks.find(t => t.id === action.payload)
@@ -157,11 +148,7 @@ function reducer(state: AppState, action: AppAction): AppState {
         ...state,
         tasks: state.tasks.filter(t => t.id !== action.payload),
         trash: [{ ...task, status: 'archived' }, ...state.trash],
-        activity: addActivity(state, {
-          type: 'deleted',
-          taskId: task.id,
-          taskTitle: task.title,
-        }),
+        activity: addActivity(state, { type: 'deleted', taskId: task.id, taskTitle: task.title }),
       }
     }
 
@@ -177,13 +164,8 @@ function reducer(state: AppState, action: AppAction): AppState {
 
     case 'ADD_NOTE':
       return { ...state, notes: [action.payload, ...state.notes] }
-
     case 'UPDATE_NOTE':
-      return {
-        ...state,
-        notes: state.notes.map(n => n.id === action.payload.id ? action.payload : n),
-      }
-
+      return { ...state, notes: state.notes.map(n => n.id === action.payload.id ? action.payload : n) }
     case 'DELETE_NOTE':
       return { ...state, notes: state.notes.filter(n => n.id !== action.payload) }
 
@@ -208,45 +190,18 @@ function reducer(state: AppState, action: AppAction): AppState {
     case 'ADD_CATEGORY':
       return { ...state, categories: [...state.categories, action.payload] }
 
-    case 'SET_ACTIVE_PAGE':
-      return { ...state, activePage: action.payload }
-
-    case 'SET_SEARCH':
-      return { ...state, searchQuery: action.payload }
-
-    case 'SET_SEARCH_FILTERS':
-      return { ...state, searchFilters: action.payload }
-
-    case 'CLEAR_SEARCH_FILTERS':
-      return { ...state, searchFilters: {} }
-
-    case 'TOGGLE_ADVANCED_SEARCH':
-      return { ...state, showAdvancedSearch: !state.showAdvancedSearch }
-
-    case 'CLOSE_ADVANCED_SEARCH':
-      return { ...state, showAdvancedSearch: false }
-
-    case 'TOGGLE_QUICK_ADD':
-      return { ...state, showQuickAdd: !state.showQuickAdd }
-
-    case 'CLOSE_QUICK_ADD':
-      return { ...state, showQuickAdd: false }
-
-    case 'TOGGLE_FOCUS_MODE':
-      return { ...state, focusMode: !state.focusMode }
-
-    case 'TOGGLE_SIDEBAR':
-      return { ...state, isSidebarCollapsed: !state.isSidebarCollapsed }
-
+    case 'SET_ACTIVE_PAGE':    return { ...state, activePage: action.payload }
+    case 'SET_SEARCH':         return { ...state, searchQuery: action.payload }
+    case 'SET_SEARCH_FILTERS': return { ...state, searchFilters: action.payload }
+    case 'CLEAR_SEARCH_FILTERS': return { ...state, searchFilters: {} }
+    case 'TOGGLE_ADVANCED_SEARCH': return { ...state, showAdvancedSearch: !state.showAdvancedSearch }
+    case 'CLOSE_ADVANCED_SEARCH':  return { ...state, showAdvancedSearch: false }
+    case 'TOGGLE_QUICK_ADD':   return { ...state, showQuickAdd: !state.showQuickAdd }
+    case 'CLOSE_QUICK_ADD':    return { ...state, showQuickAdd: false }
+    case 'TOGGLE_FOCUS_MODE':  return { ...state, focusMode: !state.focusMode }
+    case 'TOGGLE_SIDEBAR':     return { ...state, isSidebarCollapsed: !state.isSidebarCollapsed }
     case 'TOGGLE_THEME':
-      return {
-        ...state,
-        settings: {
-          ...state.settings,
-          theme: state.settings.theme === 'dark' ? 'light' : 'dark',
-        },
-      }
-
+      return { ...state, settings: { ...state.settings, theme: state.settings.theme === 'dark' ? 'light' : 'dark' } }
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } }
 
@@ -265,6 +220,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const lastResetCheck = useRef<string | null>(null)
 
+  // Load settings & XP dari localStorage saat mount
+  useEffect(() => {
+    const settingsRaw = localStorage.getItem(STORAGE_KEYS.SETTINGS)
+    const xpRaw = localStorage.getItem('taskflow_xp')
+    const partial: Partial<AppState> = {}
+
+    if (settingsRaw) {
+      try { partial.settings = { ...defaultSettings, ...JSON.parse(settingsRaw) } } catch {}
+    }
+    if (xpRaw) {
+      try {
+        const { xp, level } = JSON.parse(xpRaw)
+        partial.xp = xp
+        partial.level = level
+      } catch {}
+    }
+
+    if (Object.keys(partial).length > 0) dispatch({ type: 'LOAD_STATE', payload: partial })
+  }, [])
+
   // Reset recurring tasks saat hari berganti
   useEffect(() => {
     const todayStr = new Date().toDateString()
@@ -276,38 +251,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     state.tasks.forEach(task => {
       if (task.repeat === 'none' || task.status !== 'done' || !task.completedAt) return
-
       const completed = new Date(task.completedAt)
       let shouldReset = false
 
       if (task.repeat === 'daily') {
         shouldReset = completed.toDateString() !== todayStr
       } else if (task.repeat === 'weekly') {
-        const diffDays = Math.floor(
-          (now.getTime() - completed.getTime()) / (1000 * 60 * 60 * 24)
-        )
+        const diffDays = Math.floor((now.getTime() - completed.getTime()) / (1000 * 60 * 60 * 24))
         shouldReset = diffDays >= 7
       } else if (task.repeat === 'monthly') {
-        shouldReset =
-          completed.getMonth() !== now.getMonth() ||
-          completed.getFullYear() !== now.getFullYear()
+        shouldReset = completed.getMonth() !== now.getMonth() || completed.getFullYear() !== now.getFullYear()
       }
 
       if (shouldReset) {
-        toReset.push({
-          ...task,
-          status: 'todo',
-          progress: 0,
-          completedAt: undefined,
-          updatedAt: new Date().toISOString(),
-        })
+        toReset.push({ ...task, status: 'todo', progress: 0, completedAt: undefined, updatedAt: new Date().toISOString() })
       }
     })
 
-    if (toReset.length > 0) {
-      dispatch({ type: 'RESET_RECURRING_TASKS', payload: toReset })
-    }
-
+    if (toReset.length > 0) dispatch({ type: 'RESET_RECURRING_TASKS', payload: toReset })
     lastResetCheck.current = todayStr
   }, [state.tasks])
 
@@ -321,16 +282,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(state.trash))
   }, [state.tasks, state.notes, state.categories, state.activity, state.settings, state.trash])
 
-  // Apply accent color ke CSS variables
+  // Sync XP ke localStorage
+  useEffect(() => {
+    localStorage.setItem('taskflow_xp', JSON.stringify({ xp: state.xp, level: state.level }))
+  }, [state.xp, state.level])
+
+  // Apply accent color
   useEffect(() => {
     document.body.style.setProperty('--accent-color', state.settings.accentColor)
-    const dimmedColor = adjustBrightness(state.settings.accentColor, -0.15)
-    const glowColor = hexToRgba(state.settings.accentColor, 0.15)
-    document.body.style.setProperty('--accent-color-dim', dimmedColor)
-    document.body.style.setProperty('--accent-color-glow', glowColor)
+    document.body.style.setProperty('--accent-color-dim', adjustBrightness(state.settings.accentColor, -0.15))
+    document.body.style.setProperty('--accent-color-glow', hexToRgba(state.settings.accentColor, 0.15))
   }, [state.settings.accentColor])
 
-  // Apply theme ke <html>
+  // Apply theme
   useEffect(() => {
     document.documentElement.classList.toggle('light', state.settings.theme === 'light')
     document.documentElement.classList.toggle('dark', state.settings.theme === 'dark')

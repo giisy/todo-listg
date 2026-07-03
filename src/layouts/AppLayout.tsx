@@ -12,6 +12,7 @@ import {
 import type { NavPage } from '@/types'
 import { cn } from '@/utils/cn'
 import { useNotifications } from '@/hooks/useNotifications'
+import UpdatePrompt from '@/components/UpdatePrompt'
 
 const bottomNav = [
   { id: 'dashboard' as NavPage, icon: LayoutDashboard, label: 'Home' },

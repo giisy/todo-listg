@@ -11,11 +11,6 @@ import { cn } from '@/utils/cn'
 import type { Task } from '@/types'
 import AddTaskModal from '@/features/tasks/AddTaskModal'
 import EditTaskModal from '@/features/tasks/EditTaskModal'
-import DraggableTaskList from '@/components/common/DraggableTaskList'
-import SortableTaskItem from '@/components/common/SortableTaskItem'
-import { closestCenter } from '@dnd-kit/core'
-import { arrayMove } from '@dnd-kit/sortable'
-import { DragEndEvent } from '@dnd-kit/core'
 
 type SortBy = 'createdAt' | 'dueDate' | 'priority' | 'title'
 type FilterBy = 'all' | 'todo' | 'done' | 'high' | 'favorite'
@@ -27,7 +22,6 @@ export default function TodayPage() {
   const [showModal, setShowModal] = useState(false)
   const [sortBy, setSortBy] = useState<SortBy>('createdAt')
   const [filterBy, setFilterBy] = useState<FilterBy>('all')
-  const [enableDragDrop, setEnableDragDrop] = useState(true)
 
   const filtered = useMemo(() => {
     let list = state.tasks.filter(t => t.status !== 'archived')
@@ -72,18 +66,6 @@ export default function TodayPage() {
   const todoCount = filtered.filter(t => t.status !== 'done').length
   const progress = filtered.length > 0 ? Math.round((doneCount / filtered.length) * 100) : 0
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = filtered.findIndex(t => t.id === active.id)
-    const newIndex = filtered.findIndex(t => t.id === over.id)
-    if (oldIndex === -1 || newIndex === -1) return
-
-    const reorderedTasks = arrayMove(state.tasks, oldIndex, newIndex)
-    dispatch({ type: 'REORDER_TASKS', payload: { sourceIndex: oldIndex, destinationIndex: newIndex } })
-  }
-
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-4">
@@ -120,45 +102,36 @@ export default function TodayPage() {
           </div>
         </div>
 
-         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-           <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto scrollbar-none pb-1 sm:pb-0">
-             {([
-               { id: 'all', label: 'All' },
-               { id: 'todo', label: 'To Do' },
-               { id: 'done', label: 'Done' },
-               { id: 'high', label: 'High' },
-               { id: 'favorite', label: '⭐ Fav' },
-             ] as { id: FilterBy; label: string }[]).map(f => (
-               <button
-                 key={f.id}
-                 onClick={() => setFilterBy(f.id)}
-                 className={cn(
-                   'px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 whitespace-nowrap flex-shrink-0',
-                   filterBy === f.id ? 'bg-accent-blue text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
-                 )}
-               >
-                 {f.label}
-               </button>
-             ))}
-           </div>
-           <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-             <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} className="input py-1.5 w-auto text-xs">
-               <option value="createdAt">Newest</option>
-               <option value="dueDate">Due Date</option>
-               <option value="priority">Priority</option>
-               <option value="title">Title</option>
-             </select>
-             <button
-               onClick={() => setEnableDragDrop(!enableDragDrop)}
-               className={cn(
-                 'px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150',
-                 enableDragDrop ? 'bg-accent-blue text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
-               )}
-             >
-               {enableDragDrop ? '🔓 Drag' : '🔒 Lock'}
-             </button>
-           </div>
-         </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+          <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto scrollbar-none pb-1 sm:pb-0">
+            {([
+              { id: 'all', label: 'All' },
+              { id: 'todo', label: 'To Do' },
+              { id: 'done', label: 'Done' },
+              { id: 'high', label: 'High' },
+              { id: 'favorite', label: '⭐ Fav' },
+            ] as { id: FilterBy; label: string }[]).map(f => (
+              <button
+                key={f.id}
+                onClick={() => setFilterBy(f.id)}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 whitespace-nowrap flex-shrink-0',
+                  filterBy === f.id ? 'bg-accent-blue text-white' : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} className="input py-1.5 w-auto text-xs">
+              <option value="createdAt">Newest</option>
+              <option value="dueDate">Due Date</option>
+              <option value="priority">Priority</option>
+              <option value="title">Title</option>
+            </select>
+          </div>
+        </div>
 
         {filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card p-10 lg:p-12 flex flex-col items-center gap-4">
@@ -175,31 +148,23 @@ export default function TodayPage() {
               </button>
             )}
           </motion.div>
-         ) : (
-           <div className="space-y-2">
-             <AnimatePresence mode="popLayout">
-               {enableDragDrop && sortBy === 'createdAt' ? (
-                 <DraggableTaskList
-                   tasks={filtered.map(t => ({ id: t.id }))}
-                   onDragEnd={handleDragEnd}
-                   disabled={!enableDragDrop}
-                 >
-                   {filtered.map((task) => (
-                     <SortableTaskItem key={task.id} id={task.id} disabled={!enableDragDrop}>
-                       <TaskCard task={task} />
-                     </SortableTaskItem>
-                   ))}
-                 </DraggableTaskList>
-               ) : (
-                 filtered.map((task) => (
-                   <SortableTaskItem key={task.id} id={task.id} disabled>
-                     <TaskCard task={task} />
-                   </SortableTaskItem>
-                 ))
-               )}
-             </AnimatePresence>
-           </div>
-         )}
+        ) : (
+          <div className="space-y-2">
+            <AnimatePresence mode="popLayout">
+              {filtered.map((task) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <TaskCard task={task} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
       <AddTaskModal open={showModal} onClose={() => setShowModal(false)} />
     </div>
@@ -282,9 +247,9 @@ function TaskCard({ task }: { task: Task }) {
                 <span key={tag} className="text-2xs px-1.5 py-0.5 rounded bg-white/5 text-text-muted hidden sm:inline">#{tag}</span>
               ))}
             </div>
-           </div>
-         </div>
-       </div>
+          </div>
+        </div>
+      </div>
       <EditTaskModal task={task} open={editOpen} onClose={() => setEditOpen(false)} />
     </>
   )

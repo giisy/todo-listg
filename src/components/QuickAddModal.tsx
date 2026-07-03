@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'  // ← tambahkan ini
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X, Calendar, Flag } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
@@ -18,7 +19,6 @@ export default function QuickAddModal({ onClose }: QuickAddModalProps) {
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<Priority>('medium')
   const [dueDate, setDueDate] = useState('')
-  const [categoryId, setCategoryId] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,14 +26,13 @@ export default function QuickAddModal({ onClose }: QuickAddModalProps) {
       toast('Please enter a task title', 'error')
       return
     }
-
     const newTask: Task = {
       id: generateId(),
       title: title.trim(),
       description: description.trim() || undefined,
       priority,
       status: 'todo',
-      categoryId: categoryId || undefined,
+      categoryId: undefined,
       dueDate: dueDate || undefined,
       reminder: undefined,
       repeat: 'none',
@@ -46,7 +45,6 @@ export default function QuickAddModal({ onClose }: QuickAddModalProps) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-
     dispatch({ type: 'ADD_TASK', payload: newTask })
     toast('Task created successfully', 'success')
     onClose()
@@ -54,7 +52,6 @@ export default function QuickAddModal({ onClose }: QuickAddModalProps) {
     setDescription('')
     setPriority('medium')
     setDueDate('')
-    setCategoryId('')
   }
 
   const priorities: { value: Priority; label: string; color: string }[] = [
@@ -64,7 +61,8 @@ export default function QuickAddModal({ onClose }: QuickAddModalProps) {
     { value: 'urgent', label: 'Urgent', color: '#DC2626' },
   ]
 
-  return (
+  // ← wrap dengan createPortal
+  return createPortal(
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
@@ -77,12 +75,12 @@ export default function QuickAddModal({ onClose }: QuickAddModalProps) {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="modal-content max-w-lg"
+          className="modal-content max-w-lg p-5"
           onClick={e => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-accent-blue/10 flex items-center justify-center" style={{ backgroundColor: 'var(--accent-color)', color: 'white' }}>
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--accent-color)', color: 'white' }}>
                 <Plus size={20} />
               </div>
               <div>
@@ -90,37 +88,30 @@ export default function QuickAddModal({ onClose }: QuickAddModalProps) {
                 <p className="text-xs text-text-muted">Create a new task instantly</p>
               </div>
             </div>
-            <button onClick={onClose} className="btn-icon">
-              <X size={20} />
-            </button>
+            <button onClick={onClose} className="btn-icon"><X size={20} /></button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <input
-                type="text"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Task title..."
-                className="input"
-                autoFocus
-              />
-            </div>
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Task title..."
+              className="input"
+              autoFocus
+            />
+
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Description (optional)..."
+              className="input min-h-[80px] resize-none"
+              rows={3}
+            />
 
             <div>
-              <textarea
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="Description (optional)..."
-                className="input min-h-[80px] resize-none"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-text-muted mb-2 block flex items-center gap-2">
-                <Flag size={12} />
-                Priority
+              <label className="text-xs font-medium text-text-muted mb-2 flex items-center gap-2">
+                <Flag size={12} /> Priority
               </label>
               <div className="flex gap-2">
                 {priorities.map(p => (
@@ -130,9 +121,7 @@ export default function QuickAddModal({ onClose }: QuickAddModalProps) {
                     onClick={() => setPriority(p.value)}
                     className={cn(
                       'flex-1 py-2 px-3 rounded-md border text-sm font-medium transition-all',
-                      priority === p.value
-                        ? 'border-current text-current'
-                        : 'border-border text-text-muted hover:border-border/80'
+                      priority === p.value ? 'border-current text-current' : 'border-border text-text-muted hover:border-border/80'
                     )}
                     style={priority === p.value ? { borderColor: p.color, color: p.color } : undefined}
                   >
@@ -143,52 +132,31 @@ export default function QuickAddModal({ onClose }: QuickAddModalProps) {
             </div>
 
             <div>
-              <label className="text-xs font-medium text-text-muted mb-2 block flex items-center gap-2">
-                <Calendar size={12} />
-                Due Date (optional)
+              <label className="text-xs font-medium text-text-muted mb-2 flex items-center gap-2">
+                <Calendar size={12} /> Due Date (optional)
               </label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={e => setDueDate(e.target.value)}
-                className="input"
-              />
+              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="input" />
             </div>
 
             <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn-ghost flex-1"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!title.trim()}
-                className="btn-primary flex-1"
-              >
-                Add Task
-              </button>
+              <button type="button" onClick={onClose} className="btn-ghost flex-1">Cancel</button>
+              <button type="submit" disabled={!title.trim()} className="btn-primary flex-1">Add Task</button>
             </div>
           </form>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body  // ← render ke body
   )
 }
 
 export function QuickAddButton() {
   const { state, dispatch } = useApp()
-  
   return (
     <>
       <button
         onClick={() => dispatch({ type: 'TOGGLE_QUICK_ADD' })}
-        className={cn(
-          'btn-icon relative',
-          state.showQuickAdd && 'text-accent-blue bg-accent-blue/10'
-        )}
+        className={cn('btn-icon relative', state.showQuickAdd && 'text-accent-blue bg-accent-blue/10')}
         title="Quick Add Task (Cmd+N)"
       >
         <Plus size={15} />

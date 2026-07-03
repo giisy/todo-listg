@@ -8,38 +8,38 @@
   *, *::before, *::after { box-sizing: border-box; }
   html { font-size: 14px; }
 
-  /* ── Dark mode (default) ── */
+  /* ── Classic Dark (default) — space-separated RGB untuk Tailwind opacity ── */
   html {
-    --color-bg-primary:   #0F1115;
-    --color-bg-secondary: #13161B;
-    --color-bg-card:      #1A1E24;
-    --color-bg-elevated:  #1E2229;
-    --color-border:        #2A2F38;
-    --color-border-subtle: #1F2430;
-    --color-text-primary:   #F1F5F9;
-    --color-text-secondary: #9CA3AF;
-    --color-text-muted:     #4B5563;
-    --color-text-inverse:   #0F1115;
-    --shadow-card:    0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
-    --shadow-elevated:0 4px 16px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
-    --shadow-modal:   0 24px 64px rgba(0,0,0,0.7);
+    --color-bg-primary:    10 10 10;
+    --color-bg-secondary:  17 17 17;
+    --color-bg-card:       26 26 26;
+    --color-bg-elevated:   34 34 34;
+    --color-border:        42 42 42;
+    --color-border-subtle: 31 31 31;
+    --color-text-primary:  241 245 249;
+    --color-text-secondary:156 163 175;
+    --color-text-muted:    75 85 99;
+    --color-text-inverse:  10 10 10;
+    --shadow-card:    0 1px 3px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.4);
+    --shadow-elevated:0 4px 16px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.4);
+    --shadow-modal:   0 24px 64px rgba(0,0,0,0.8);
   }
 
   /* ── Light mode ── */
   html.light {
-    --color-bg-primary:   #F8FAFC;
-    --color-bg-secondary: #F1F5F9;
-    --color-bg-card:      #FFFFFF;
-    --color-bg-elevated:  #FFFFFF;
-    --color-border:        #E2E8F0;
-    --color-border-subtle: #F1F5F9;
-    --color-text-primary:   #0F172A;
-    --color-text-secondary: #475569;
-    --color-text-muted:     #94A3B8;
-    --color-text-inverse:   #F8FAFC;
+    --color-bg-primary:    248 250 252;
+    --color-bg-secondary:  241 245 249;
+    --color-bg-card:       255 255 255;
+    --color-bg-elevated:   255 255 255;
+    --color-border:        226 232 240;
+    --color-border-subtle: 241 245 249;
+    --color-text-primary:  15 23 42;
+    --color-text-secondary:71 85 105;
+    --color-text-muted:    148 163 184;
+    --color-text-inverse:  248 250 252;
     --shadow-card:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
-    --shadow-elevated:0 4px 16px rgba(0,0,0,0.1),  0 1px 4px rgba(0,0,0,0.06);
-    --shadow-modal:   0 24px 64px rgba(0,0,0,0.2);
+    --shadow-elevated:0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    --shadow-modal:   0 24px 64px rgba(0,0,0,0.20);
   }
 
   body {
@@ -54,31 +54,25 @@
 
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
-  ::selection { @apply bg-accent-blue/30 text-white; }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--color-border));
+    border-radius: 9999px;
+  }
+  ::selection { background: rgba(59,130,246,0.3); color: white; }
 }
 
 @layer components {
   .glass {
     backdrop-filter: blur(12px);
-    background: rgba(26, 30, 36, 0.7);
-    border: 1px solid rgba(42, 47, 56, 0.6);
-  }
-  html.light .glass {
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(226, 232, 240, 0.8);
+    background: rgb(var(--color-bg-card) / 0.85);
+    border: 1px solid rgb(var(--color-border) / 0.6);
   }
 
-  .card {
-    @apply bg-bg-card rounded-lg border border-border shadow-card;
-    border-color: color-mix(in srgb, var(--color-border) 60%, transparent);
-  }
-  .card-elevated {
-    @apply bg-bg-elevated rounded-lg border border-border shadow-elevated;
-    border-color: color-mix(in srgb, var(--color-border) 40%, transparent);
-  }
+  .card { @apply bg-bg-card rounded-lg border border-border/60 shadow-card; }
+  .card-elevated { @apply bg-bg-elevated rounded-lg border border-border/40 shadow-elevated; }
+
   .btn-primary {
-    @apply bg-[var(--accent-color)] hover:bg-[var(--accent-color-dim)] text-white font-medium px-4 py-2 rounded-md transition-all duration-150 text-sm flex items-center gap-2;
+    @apply bg-[var(--accent-color)] hover:opacity-90 text-white font-medium px-4 py-2 rounded-md transition-all duration-150 text-sm flex items-center gap-2;
   }
   .btn-ghost {
     @apply text-text-secondary hover:text-text-primary rounded-md px-3 py-2 transition-all duration-150 text-sm flex items-center gap-2;
@@ -100,27 +94,23 @@
   }
   html:not(.light) .nav-item:hover { @apply text-text-primary bg-white/5; }
   html.light       .nav-item:hover { @apply text-text-primary bg-black/5; }
-  .nav-item.active {
-    @apply text-[var(--accent-color)] bg-[var(--accent-color-glow)];
-  }
-  .divider {
-    @apply my-2;
-    border-top: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
-  }
-  .priority-dot {
-    @apply w-2 h-2 rounded-full flex-shrink-0;
-  }
-  .stat-card {
-    @apply card p-5 flex flex-col gap-3 transition-all duration-200;
-  }
+  .nav-item.active { @apply text-[var(--accent-color)] bg-[var(--accent-color-glow)]; }
+
+  .divider { @apply my-2 border-t border-border/40; }
+  .priority-dot { @apply w-2 h-2 rounded-full flex-shrink-0; }
+  .stat-card { @apply card p-5 flex flex-col gap-3 transition-all duration-200; }
+
   .modal-overlay {
-    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center;
+    @apply fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center;
   }
-  html.light .modal-overlay {
-    @apply bg-black/40;
-  }
+  html.light .modal-overlay { @apply bg-black/40; }
   .modal-content {
     @apply bg-bg-card border border-border rounded-xl shadow-modal w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto;
   }
 }
 
+@layer utilities {
+  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 8px); }
+}

@@ -75,49 +75,113 @@ export default function Topbar({ onMenuClick }: Props) {
         </AnimatePresence>
       </div>
 
-      {/* Desktop Search */}
+      {/* Desktop Search + dropdown */}
+<div className="relative hidden md:block">
+  <motion.div
+    animate={{ width: isSearchFocused ? 260 : 200 }}
+    transition={{ duration: 0.2 }}
+    className={cn(
+      'flex items-center gap-2 px-3 py-1.5 rounded-md border bg-bg-card transition-colors duration-200',
+      isSearchFocused ? 'border-accent-blue/60' : 'border-border'
+    )}
+  >
+    <Search size={13} className="text-text-muted flex-shrink-0" />
+    <input
+      type="text"
+      placeholder="Search tasks..."
+      value={state.searchQuery}
+      onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
+      onFocus={() => setIsSearchFocused(true)}
+      onBlur={() => setTimeout(() => setIsSearchFocused(false), 150)}
+      className="bg-transparent text-sm text-text-primary placeholder:text-text-muted flex-1 min-w-0 focus:outline-none"
+    />
+    {state.searchQuery ? (
+      <button onClick={() => dispatch({ type: 'SET_SEARCH', payload: '' })} className="text-text-muted hover:text-text-primary">
+        <X size={12} />
+      </button>
+    ) : (
+      <div className="flex items-center gap-0.5 text-text-muted opacity-60">
+        <Command size={10} />
+        <span className="text-2xs">K</span>
+      </div>
+    )}
+    <button
+      onClick={() => dispatch({ type: 'TOGGLE_ADVANCED_SEARCH' })}
+      className={cn('text-text-muted hover:text-text-primary transition-colors', Object.keys(state.searchFilters).length > 0 && 'text-accent-blue')}
+      title="Advanced Search"
+    >
+      <Filter size={13} />
+    </button>
+  </motion.div>
+
+  {/* Search dropdown — muncul saat ada query */}
+  <AnimatePresence>
+    {isSearchFocused && state.searchQuery.trim() && (
       <motion.div
-        animate={{ width: isSearchFocused ? 260 : 200 }}
-        transition={{ duration: 0.2 }}
-        className={cn(
-          'hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md border bg-bg-card transition-colors duration-200',
-          isSearchFocused ? 'border-accent-blue/60' : 'border-border'
-        )}
+        initial={{ opacity: 0, y: -4 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -4 }}
+        transition={{ duration: 0.15 }}
+        className="absolute top-full left-0 right-0 mt-1 bg-bg-card border border-border rounded-lg shadow-elevated z-50 overflow-hidden"
+        style={{ minWidth: 260 }}
       >
-        <Search size={13} className="text-text-muted flex-shrink-0" />
-        <input
-          type="text"
-          placeholder="Search tasks..."
-          value={state.searchQuery}
-          onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
-          onFocus={() => setIsSearchFocused(true)}
-          onBlur={() => setIsSearchFocused(false)}
-          className="bg-transparent text-sm text-text-primary placeholder:text-text-muted flex-1 min-w-0 focus:outline-none"
-        />
-        {state.searchQuery ? (
-          <button
-            onClick={() => dispatch({ type: 'SET_SEARCH', payload: '' })}
-            className="text-text-muted hover:text-text-primary"
-          >
-            <X size={12} />
-          </button>
-        ) : (
-          <div className="flex items-center gap-0.5 text-text-muted opacity-60">
-            <Command size={10} />
-            <span className="text-2xs">K</span>
-          </div>
-        )}
-        <button
-          onClick={() => dispatch({ type: 'TOGGLE_ADVANCED_SEARCH' })}
-          className={cn(
-            'text-text-muted hover:text-text-primary transition-colors',
-            Object.keys(state.searchFilters).length > 0 && 'text-accent-blue'
-          )}
-          title="Advanced Search"
-        >
-          <Filter size={13} />
-        </button>
+        {(() => {
+          const q = state.searchQuery.toLowerCase()
+          const results = state.tasks
+            .filter(t => t.status !== 'archived' && (
+              t.title.toLowerCase().includes(q) ||
+              t.description?.toLowerCase().includes(q) ||
+              t.tags.some(tag => tag.toLowerCase().includes(q))
+            ))
+            .slice(0, 6)
+
+          return results.length > 0 ? (
+            <>
+              <div className="px-3 py-2 border-b border-border/50">
+                <span className="text-2xs text-text-muted font-medium uppercase tracking-wider">
+                  {results.length} result{results.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              {results.map(task => (
+                <button
+                  key={task.id}
+                  onMouseDown={() => {
+                    dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'today' })
+                    dispatch({ type: 'SET_SEARCH', payload: task.title })
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors text-left"
+                >
+                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: task.status === 'done' ? '#10B981' : '#6B7280' }} />
+                  <div className="flex-1 min-w-0">
+                    <p className={cn('text-sm text-text-primary truncate', task.status === 'done' && 'line-through text-text-muted')}>
+                      {task.title}
+                    </p>
+                    {task.description && (
+                      <p className="text-2xs text-text-muted truncate">{task.description}</p>
+                    )}
+                  </div>
+                  <span className="text-2xs text-text-muted flex-shrink-0 capitalize">
+                    {task.status.replace('_', ' ')}
+                  </span>
+                </button>
+              ))}
+              <button
+                onMouseDown={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'today' })}
+                className="w-full px-3 py-2 text-2xs text-[var(--accent-color)] hover:bg-white/5 transition-colors text-center border-t border-border/50"
+              >
+                See all results in Today →
+              </button>
+            </>
+          ) : (
+            <div className="px-3 py-4 text-center">
+              <p className="text-xs text-text-muted">No tasks match "{state.searchQuery}"</p>
+            </div>
+          )
+        })()}
       </motion.div>
+    )}
+  </AnimatePresence>
+</div>
 
       {/* Actions */}
       <div className="flex items-center gap-1">
