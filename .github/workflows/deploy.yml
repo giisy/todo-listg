@@ -25,6 +25,14 @@ jobs:
           node-version: 24
           cache: 'npm'
 
+      - name: Show repo files
+        run: ls -la
+
+      - name: Show package files
+        run: |
+          if [ -f package.json ]; then cat package.json; else echo "no package.json in this directory"; fi
+          if [ -f package-lock.json ]; then echo "lockfile present"; else echo "no package-lock.json"; fi
+
       - run: npm ci
 
       - run: npm run build
