@@ -1,7 +1,7 @@
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'archived'
 export type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly'
-export type NavPage = 'dashboard' | 'today' | 'upcoming' | 'projects' | 'important' | 'categories' | 'notes' | 'pomodoro' | 'analytics' | 'trash' | 'recent' | 'profile' | 'settings' | 'calendar' | 'keyboardShortcuts'
+export type NavPage = 'dashboard' | 'today' | 'upcoming' | 'projects' | 'important' | 'categories' | 'notes' | 'pomodoro' | 'analytics' | 'trash' | 'recent' | 'profile' | 'settings' | 'calendar'
 
 export interface Tag {
   id: string

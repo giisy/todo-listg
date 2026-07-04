@@ -59,6 +59,18 @@ function addActivity(state: AppState, log: Omit<ActivityLog, 'id' | 'timestamp'>
   return [entry, ...state.activity].slice(0, 50)
 }
 
+// ─── Baca localStorage SAAT initialState dibentuk ─────────────────────────────
+// Ini fix root cause: useEffect async = selalu flash ke default dulu
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return fallback
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
 const defaultSettings: UserSettings = {
   name: 'name',
   pomodoroWork: 25,
@@ -69,14 +81,18 @@ const defaultSettings: UserSettings = {
   theme: 'dark',
 }
 
+// Baca settings dari localStorage langsung, bukan di useEffect
+const savedSettings = loadFromStorage<UserSettings>(STORAGE_KEYS.SETTINGS, defaultSettings)
+const savedXpData   = loadFromStorage<{ xp: number; level: number }>('taskflow_xp', { xp: 0, level: 1 })
+
 const initialState: AppState = {
-  tasks: [],
-  notes: [],
+  tasks:      [],
+  notes:      [],
   categories: DEFAULT_CATEGORIES,
-  tags: DEFAULT_TAGS,
-  trash: [],
-  activity: [],
-  settings: defaultSettings,
+  tags:       DEFAULT_TAGS,
+  trash:      [],
+  activity:   [],
+  settings:   { ...defaultSettings, ...savedSettings },  // merge supaya field baru tidak hilang
   activePage: 'dashboard',
   searchQuery: '',
   searchFilters: {},
@@ -84,9 +100,23 @@ const initialState: AppState = {
   showAdvancedSearch: false,
   showQuickAdd: false,
   focusMode: false,
-  xp: 0,
-  level: 1,
+  xp:    savedXpData.xp,
+  level: savedXpData.level,
 }
+
+// ─── Apply theme & accent ke DOM segera (sebelum React mount) ─────────────────
+// Ini cegah FOUC (flash of unstyled content) pada tema
+;(function applyThemeEarly() {
+  const s = savedSettings
+  if (s.theme === 'light') {
+    document.documentElement.classList.add('light')
+  } else {
+    document.documentElement.classList.remove('light')
+  }
+  if (s.accentColor) {
+    document.body.style.setProperty('--accent-color', s.accentColor)
+  }
+})()
 
 function reducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
@@ -100,46 +130,70 @@ function reducer(state: AppState, action: AppAction): AppState {
           { ...action.payload, order: Math.max(...state.tasks.map(t => t.order), 0) + 1 },
           ...state.tasks,
         ],
-        activity: addActivity(state, { type: 'created', taskId: action.payload.id, taskTitle: action.payload.title }),
+        activity: addActivity(state, {
+          type: 'created',
+          taskId: action.payload.id,
+          taskTitle: action.payload.title,
+        }),
       }
 
     case 'UPDATE_TASK':
       return {
         ...state,
         tasks: state.tasks.map(t => t.id === action.payload.id ? action.payload : t),
-        activity: addActivity(state, { type: 'updated', taskId: action.payload.id, taskTitle: action.payload.title }),
+        activity: addActivity(state, {
+          type: 'updated',
+          taskId: action.payload.id,
+          taskTitle: action.payload.title,
+        }),
       }
 
     case 'TOGGLE_TASK': {
-      const task = state.tasks.find(t => t.id === action.payload)
-      if (!task) return state
-      const done = task.status !== 'done'
-      const updated = {
-        ...task,
-        status: done ? 'done' as const : 'todo' as const,
-        progress: done ? 100 : 0,
-        completedAt: done ? new Date().toISOString() : undefined,
-        updatedAt: new Date().toISOString(),
-      }
-      // Award +10 XP when completing a task
-      const newXp = done ? state.xp + 10 : state.xp
-      const newLevel = Math.floor(newXp / 100) + 1
-      return {
-        ...state,
-        tasks: state.tasks.map(t => t.id === action.payload ? updated : t),
-        activity: done
-          ? addActivity(state, { type: 'completed', taskId: task.id, taskTitle: task.title })
-          : state.activity,
-        xp: newXp,
-        level: newLevel,
-      }
-    }
+  const task = state.tasks.find(t => t.id === action.payload)
+  if (!task) return state
+  const completing = task.status !== 'done'
+
+  const updated = {
+    ...task,
+    status: completing ? 'done' as const : 'todo' as const,
+    progress: completing ? 100 : 0,
+    completedAt: completing ? new Date().toISOString() : undefined,
+    updatedAt: new Date().toISOString(),
+  }
+
+  // +10 XP saat complete, -10 saat uncheck (min 0)
+  const XP_PER_TASK = 10
+  const newXp = completing
+    ? state.xp + XP_PER_TASK
+    : Math.max(0, state.xp - XP_PER_TASK)
+  const newLevel = Math.floor(newXp / 100) + 1
+
+  return {
+    ...state,
+    tasks: state.tasks.map(t => t.id === action.payload ? updated : t),
+    activity: completing
+      ? addActivity(state, { type: 'completed', taskId: task.id, taskTitle: task.title })
+      : state.activity,
+    xp: newXp,
+    level: newLevel,
+  }
+}
 
     case 'TOGGLE_FAVORITE':
-      return { ...state, tasks: state.tasks.map(t => t.id === action.payload ? { ...t, isFavorite: !t.isFavorite } : t) }
+      return {
+        ...state,
+        tasks: state.tasks.map(t =>
+          t.id === action.payload ? { ...t, isFavorite: !t.isFavorite } : t
+        ),
+      }
 
     case 'TOGGLE_PIN':
-      return { ...state, tasks: state.tasks.map(t => t.id === action.payload ? { ...t, isPinned: !t.isPinned } : t) }
+      return {
+        ...state,
+        tasks: state.tasks.map(t =>
+          t.id === action.payload ? { ...t, isPinned: !t.isPinned } : t
+        ),
+      }
 
     case 'DELETE_TASK': {
       const task = state.tasks.find(t => t.id === action.payload)
@@ -148,7 +202,11 @@ function reducer(state: AppState, action: AppAction): AppState {
         ...state,
         tasks: state.tasks.filter(t => t.id !== action.payload),
         trash: [{ ...task, status: 'archived' }, ...state.trash],
-        activity: addActivity(state, { type: 'deleted', taskId: task.id, taskTitle: task.title }),
+        activity: addActivity(state, {
+          type: 'deleted',
+          taskId: task.id,
+          taskTitle: task.title,
+        }),
       }
     }
 
@@ -182,26 +240,33 @@ function reducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         tasks: state.tasks.map(t => {
-          const resetTask = action.payload.find(r => r.id === t.id)
-          return resetTask || t
+          const reset = action.payload.find(r => r.id === t.id)
+          return reset || t
         }),
       }
 
     case 'ADD_CATEGORY':
       return { ...state, categories: [...state.categories, action.payload] }
 
-    case 'SET_ACTIVE_PAGE':    return { ...state, activePage: action.payload }
-    case 'SET_SEARCH':         return { ...state, searchQuery: action.payload }
-    case 'SET_SEARCH_FILTERS': return { ...state, searchFilters: action.payload }
+    case 'SET_ACTIVE_PAGE':      return { ...state, activePage: action.payload }
+    case 'SET_SEARCH':           return { ...state, searchQuery: action.payload }
+    case 'SET_SEARCH_FILTERS':   return { ...state, searchFilters: action.payload }
     case 'CLEAR_SEARCH_FILTERS': return { ...state, searchFilters: {} }
     case 'TOGGLE_ADVANCED_SEARCH': return { ...state, showAdvancedSearch: !state.showAdvancedSearch }
     case 'CLOSE_ADVANCED_SEARCH':  return { ...state, showAdvancedSearch: false }
-    case 'TOGGLE_QUICK_ADD':   return { ...state, showQuickAdd: !state.showQuickAdd }
-    case 'CLOSE_QUICK_ADD':    return { ...state, showQuickAdd: false }
-    case 'TOGGLE_FOCUS_MODE':  return { ...state, focusMode: !state.focusMode }
-    case 'TOGGLE_SIDEBAR':     return { ...state, isSidebarCollapsed: !state.isSidebarCollapsed }
+    case 'TOGGLE_QUICK_ADD':     return { ...state, showQuickAdd: !state.showQuickAdd }
+    case 'CLOSE_QUICK_ADD':      return { ...state, showQuickAdd: false }
+    case 'TOGGLE_SIDEBAR':       return { ...state, isSidebarCollapsed: !state.isSidebarCollapsed }
+
     case 'TOGGLE_THEME':
-      return { ...state, settings: { ...state.settings, theme: state.settings.theme === 'dark' ? 'light' : 'dark' } }
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          theme: state.settings.theme === 'dark' ? 'light' : 'dark',
+        },
+      }
+
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } }
 
@@ -219,26 +284,6 @@ const AppContext = createContext<{
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const lastResetCheck = useRef<string | null>(null)
-
-  // Load settings & XP dari localStorage saat mount
-  useEffect(() => {
-    const settingsRaw = localStorage.getItem(STORAGE_KEYS.SETTINGS)
-    const xpRaw = localStorage.getItem('taskflow_xp')
-    const partial: Partial<AppState> = {}
-
-    if (settingsRaw) {
-      try { partial.settings = { ...defaultSettings, ...JSON.parse(settingsRaw) } } catch {}
-    }
-    if (xpRaw) {
-      try {
-        const { xp, level } = JSON.parse(xpRaw)
-        partial.xp = xp
-        partial.level = level
-      } catch {}
-    }
-
-    if (Object.keys(partial).length > 0) dispatch({ type: 'LOAD_STATE', payload: partial })
-  }, [])
 
   // Reset recurring tasks saat hari berganti
   useEffect(() => {
@@ -264,7 +309,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       if (shouldReset) {
-        toReset.push({ ...task, status: 'todo', progress: 0, completedAt: undefined, updatedAt: new Date().toISOString() })
+        toReset.push({
+          ...task, status: 'todo', progress: 0,
+          completedAt: undefined, updatedAt: new Date().toISOString(),
+        })
       }
     })
 
@@ -272,32 +320,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     lastResetCheck.current = todayStr
   }, [state.tasks])
 
-  // Sync ke localStorage
+  // Sync semua ke localStorage
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(state.tasks))
-    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(state.notes))
+    localStorage.setItem(STORAGE_KEYS.TASKS,      JSON.stringify(state.tasks))
+    localStorage.setItem(STORAGE_KEYS.NOTES,      JSON.stringify(state.notes))
     localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(state.categories))
-    localStorage.setItem(STORAGE_KEYS.ACTIVITY, JSON.stringify(state.activity))
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(state.settings))
-    localStorage.setItem(STORAGE_KEYS.TRASH, JSON.stringify(state.trash))
-  }, [state.tasks, state.notes, state.categories, state.activity, state.settings, state.trash])
-
-  // Sync XP ke localStorage
-  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.ACTIVITY,   JSON.stringify(state.activity))
+    localStorage.setItem(STORAGE_KEYS.SETTINGS,   JSON.stringify(state.settings))
+    localStorage.setItem(STORAGE_KEYS.TRASH,      JSON.stringify(state.trash))
+    // XP tersendiri supaya tidak ikut override saat LOAD_STATE dari Supabase
     localStorage.setItem('taskflow_xp', JSON.stringify({ xp: state.xp, level: state.level }))
-  }, [state.xp, state.level])
+  }, [state.tasks, state.notes, state.categories, state.activity, state.settings, state.trash, state.xp, state.level])
 
-  // Apply accent color
+  // Apply accent color ke CSS variables
   useEffect(() => {
     document.body.style.setProperty('--accent-color', state.settings.accentColor)
     document.body.style.setProperty('--accent-color-dim', adjustBrightness(state.settings.accentColor, -0.15))
     document.body.style.setProperty('--accent-color-glow', hexToRgba(state.settings.accentColor, 0.15))
   }, [state.settings.accentColor])
 
-  // Apply theme
+  // Apply theme ke <html>
   useEffect(() => {
     document.documentElement.classList.toggle('light', state.settings.theme === 'light')
-    document.documentElement.classList.toggle('dark', state.settings.theme === 'dark')
+    document.documentElement.classList.toggle('dark',  state.settings.theme === 'dark')
   }, [state.settings.theme])
 
   function hexToRgba(hex: string, alpha: number): string {

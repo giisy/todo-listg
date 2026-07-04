@@ -18,7 +18,6 @@ import CategoriesPage from '@/pages/CategoriesPage'
 import RecentPage from '@/pages/RecentPage'
 import ProfilePage from '@/pages/ProfilePage'
 import SettingsPage from '@/pages/SettingsPage'
-import KeyboardShortcutsPage from '@/pages/KeyboardShortcutsPage'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { useSupabaseSync } from '@/hooks/useSupabaseSync'
 import { Loader2 } from 'lucide-react'
@@ -50,7 +49,6 @@ function AppContent() {
       case 'projects': return <ProjectsPage />
       case 'categories': return <CategoriesPage />
       case 'calendar': return <CalendarPage />
-      case 'keyboardShortcuts': return <KeyboardShortcutsPage />
       default:
         return (
           <div className="h-full flex items-center justify-center">

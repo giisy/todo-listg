@@ -25,7 +25,7 @@ function getGreeting() {
 
 export default function DashboardPage() {
   const { state, dispatch } = useApp()
-  const { tasks, activity, settings } = state
+  const { tasks, settings } = state
 
   const today = new Date()
   const quote = MOTIVATIONAL_QUOTES[today.getDate() % MOTIVATIONAL_QUOTES.length]
@@ -197,7 +197,7 @@ export default function DashboardPage() {
                 action="Full Analytics"
                 onAction={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'analytics' })}
               />
-              <WeeklyChart tasks={tasks} activity={activity} />
+              <WeeklyChart tasks={tasks} />
             </motion.div>
           </div>
 
@@ -241,17 +241,22 @@ export default function DashboardPage() {
   )
 }
 
-// Fix: pakai activity logs untuk completed count (tidak hilang saat repeat reset)
-function WeeklyChart({ tasks, activity }: { tasks: Task[]; activity: ActivityLog[] }) {
+function WeeklyChart({ tasks }: { tasks: Task[] }) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (6 - i))
     const label = format(d, 'EEE')
-    const created = tasks.filter(t => new Date(t.createdAt).toDateString() === d.toDateString()).length
-    // Pakai activity logs — tidak hilang saat task repeat di-reset
-    const completed = activity.filter(a =>
-      a.type === 'completed' && new Date(a.timestamp).toDateString() === d.toDateString()
+
+    const created = tasks.filter(t =>
+      new Date(t.createdAt).toDateString() === d.toDateString()
     ).length
+
+    // Hitung dari completedAt task, bukan activity log
+    // Kalau task di-uncheck, completedAt = undefined → tidak terhitung
+    const completed = tasks.filter(t =>
+      t.completedAt && new Date(t.completedAt).toDateString() === d.toDateString()
+    ).length
+
     return { label, completed, created }
   })
 
@@ -263,16 +268,14 @@ function WeeklyChart({ tasks, activity }: { tasks: Task[]; activity: ActivityLog
         {days.map((d, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-1">
             <div className="w-full flex items-end gap-0.5 h-20">
-              {/* Created — accent color */}
               <div
                 className="flex-1 rounded-t-sm transition-all duration-500 min-h-[2px]"
                 style={{
                   height: `${(d.created / max) * 100}%`,
                   background: 'var(--accent-color)',
-                  opacity: 0.4,
+                  opacity: 0.45,
                 }}
               />
-              {/* Completed — emerald */}
               <div
                 className="flex-1 bg-accent-emerald rounded-t-sm transition-all duration-500 min-h-[2px]"
                 style={{ height: `${(d.completed / max) * 100}%`, opacity: 0.7 }}
@@ -282,7 +285,7 @@ function WeeklyChart({ tasks, activity }: { tasks: Task[]; activity: ActivityLog
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/30">
+      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/10">
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--accent-color)', opacity: 0.5 }} />
           <span className="text-2xs text-text-muted">Created</span>

@@ -2,12 +2,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, CalendarDays, Calendar, CalendarRange, FolderOpen,
   Star, Tag, BookOpen, Timer, BarChart3,
-  LogOut, ChevronLeft, ChevronRight, HardDrive, Trash2,
-  Plus, Zap, Activity,
+  ChevronLeft, ChevronRight, HardDrive, Trash2,
+  Zap, Activity,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { cn } from '@/utils/cn'
-import { supabase } from '@/services/supabase'
 import type { NavPage } from '@/types'
 
 interface NavItem {
@@ -16,7 +15,6 @@ interface NavItem {
   icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
 }
 
-// navItems - pakai Calendar biasa
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'today', label: 'Today', icon: CalendarDays },
@@ -65,17 +63,17 @@ export default function Sidebar({ onClose }: SidebarProps) {
     <motion.aside
       animate={{ width: isSidebarCollapsed ? 60 : 256 }}
       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-      className="relative flex flex-col h-full bg-bg-secondary border-r border-border/50 overflow-hidden flex-shrink-0"
+      className="relative flex flex-col h-full bg-bg-secondary border-r border-border/50 overflow-visible flex-shrink-0"
     >
-      {/* Collapse toggle */}
+      {/* Collapse toggle — overflow-visible supaya tidak terpotong */}
       <button
         onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR' })}
-        className="absolute -right-3 top-6 z-10 w-6 h-6 bg-bg-card border border-border rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary transition-all duration-150 shadow-elevated"
+        className="absolute -right-3.5 top-6 z-20 w-7 h-7 bg-bg-card border border-border rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary transition-all duration-150 shadow-elevated"
       >
-        {isSidebarCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        {isSidebarCollapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
       </button>
 
-      {/* User */}
+      {/* User — hapus tombol New Task */}
       <div className={cn('flex-shrink-0 border-b border-border/50', isSidebarCollapsed ? 'p-3' : 'p-4')}>
         <div className={cn('flex items-center', isSidebarCollapsed ? 'justify-center' : 'gap-3')}>
           <div className="relative flex-shrink-0">
@@ -99,24 +97,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             )}
           </AnimatePresence>
         </div>
-
-        <AnimatePresence>
-          {!isSidebarCollapsed && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'today' })
-                onClose?.()
-              }}
-              className="mt-3 w-full flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-accent-blue/10 hover:bg-accent-blue/20 border border-accent-blue/20 hover:border-accent-blue/40 text-accent-blue text-xs font-medium transition-all duration-150"
-            >
-              <Plus size={13} strokeWidth={2.5} />
-              New Task
-            </motion.button>
-          )}
-        </AnimatePresence>
+        {/* Tombol "+ New Task" dihapus */}
       </div>
 
       {/* Nav */}
@@ -205,7 +186,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
         })}
       </nav>
 
-      {/* Footer */}
+      {/* Footer — hapus Logout, pertahankan Storage & versi */}
       <AnimatePresence>
         {!isSidebarCollapsed && (
           <motion.div
@@ -214,7 +195,6 @@ export default function Sidebar({ onClose }: SidebarProps) {
             exit={{ opacity: 0 }}
             className="flex-shrink-0 p-4 border-t border-border/50 space-y-3"
           >
-            {/* Storage */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5 text-text-muted">
@@ -231,19 +211,10 @@ export default function Sidebar({ onClose }: SidebarProps) {
               </div>
             </div>
 
-            {/* Logout */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-text-muted">
-                <Zap size={10} />
-                <span className="text-2xs">v1.0.0</span>
-              </div>
-              <button
-                onClick={() => supabase.auth.signOut()}
-                className="flex items-center gap-1.5 text-text-muted hover:text-accent-rose text-2xs transition-colors duration-150"
-              >
-                <LogOut size={11} />
-                Logout
-              </button>
+            {/* Versi saja, logout dihapus */}
+            <div className="flex items-center gap-1.5 text-text-muted">
+              <Zap size={10} />
+              <span className="text-2xs">v1.0.0</span>
             </div>
           </motion.div>
         )}

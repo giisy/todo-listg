@@ -13,7 +13,7 @@ import AddTaskModal from '@/features/tasks/AddTaskModal'
 import EditTaskModal from '@/features/tasks/EditTaskModal'
 
 type SortBy = 'createdAt' | 'dueDate' | 'priority' | 'title'
-type FilterBy = 'all' | 'todo' | 'done' | 'high' | 'favorite'
+type FilterBy = 'all' | 'todo' | 'done' | 'high'  // hapus 'favorite'
 
 const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2, low: 3 }
 
@@ -39,7 +39,6 @@ export default function TodayPage() {
       case 'todo': list = list.filter(t => t.status === 'todo' || t.status === 'in_progress'); break
       case 'done': list = list.filter(t => t.status === 'done'); break
       case 'high': list = list.filter(t => t.priority === 'high' || t.priority === 'urgent'); break
-      case 'favorite': list = list.filter(t => t.isFavorite); break
     }
 
     list = [...list].sort((a, b) => {
@@ -109,7 +108,7 @@ export default function TodayPage() {
               { id: 'todo', label: 'To Do' },
               { id: 'done', label: 'Done' },
               { id: 'high', label: 'High' },
-              { id: 'favorite', label: '⭐ Fav' },
+              // hapus Fav
             ] as { id: FilterBy; label: string }[]).map(f => (
               <button
                 key={f.id}
@@ -134,18 +133,16 @@ export default function TodayPage() {
         </div>
 
         {filtered.length === 0 ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card p-10 lg:p-12 flex flex-col items-center gap-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card p-10 lg:p-12 flex flex-col items-center gap-3">
             <div className="w-14 h-14 rounded-2xl bg-accent-blue/10 flex items-center justify-center">
               <CheckCircle2 size={24} className="text-accent-blue/60" />
             </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold text-text-primary">{state.searchQuery ? 'No tasks found' : 'No tasks yet'}</p>
-              <p className="text-xs text-text-muted mt-1">{state.searchQuery ? 'Try a different search term' : 'Tap "Add" to get started'}</p>
-            </div>
-            {!state.searchQuery && (
-              <button onClick={() => setShowModal(true)} className="btn-primary text-xs">
-                <Plus size={13} /> Add your first task
-              </button>
+            {/* Hapus teks "Tap Add" dan tombol "Add your first task" */}
+            <p className="text-sm font-semibold text-text-primary">
+              {state.searchQuery ? 'No tasks found' : 'No tasks yet'}
+            </p>
+            {state.searchQuery && (
+              <p className="text-xs text-text-muted">Try a different search term</p>
             )}
           </motion.div>
         ) : (
