@@ -1,20 +1,48 @@
 import { supabase } from './supabase'
 import type { Task, Note, ActivityLog } from '@/types'
 // ─── PROFILE ─────────────────────────────────────────
-export const fetchProfile = async (userId: string): Promise<{ name: string } | null> => {
+export const fetchProfile = async (userId: string): Promise<{
+  name: string
+  xp?: number
+  level?: number
+  theme?: string
+  accentColor?: string
+} | null> => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('name')
+    .select('name, xp, level, theme, accent_color')
     .eq('id', userId)
     .single()
   if (error) return null
-  return data
+  return {
+    name: data.name,
+    xp: data.xp ?? 0,
+    level: data.level ?? 1,
+    theme: data.theme ?? 'dark',
+    accentColor: data.accent_color ?? '#3B82F6',
+  }
 }
 
-export const upsertProfile = async (userId: string, name: string): Promise<void> => {
+export const upsertProfile = async (
+  userId: string,
+  data: {
+    name?: string
+    xp?: number
+    level?: number
+    theme?: string
+    accentColor?: string
+  }
+): Promise<void> => {
   const { error } = await supabase
     .from('profiles')
-    .upsert({ id: userId, name }, { onConflict: 'id' })
+    .upsert({
+      id: userId,
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.xp !== undefined && { xp: data.xp }),
+      ...(data.level !== undefined && { level: data.level }),
+      ...(data.theme !== undefined && { theme: data.theme }),
+      ...(data.accentColor !== undefined && { accent_color: data.accentColor }),
+    }, { onConflict: 'id' })
   if (error) throw error
 }
 

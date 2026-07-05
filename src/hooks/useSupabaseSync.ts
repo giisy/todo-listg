@@ -5,7 +5,7 @@ import {
   fetchTasks, insertTask, updateTask, deleteTask,
   fetchNotes, insertNote, updateNote, deleteNote,
   fetchActivity, insertActivity,
-  fetchProfile,
+  fetchProfile, upsertProfile,
 } from '@/services/taskService'
 import type { Task, Note, ActivityLog } from '@/types'
 
@@ -41,16 +41,35 @@ export function useSupabaseSync() {
           fetchProfile(user.id),
         ])
 
-        // Set prev DULU sebelum dispatch, supaya sync useEffect tidak trigger insert
         prevTasks.current = tasks
         prevNotes.current = notes
         prevActivity.current = activity
 
-        if (profile?.name) {
-          dispatch({ type: 'UPDATE_SETTINGS', payload: { name: profile.name } })
-        }
+        // Load semua data profile termasuk XP, level, theme, accent
+        if (profile) {
+          const settingsPayload: Record<string, unknown> = {}
+          if (profile.name)        settingsPayload.name = profile.name
+          if (profile.theme)       settingsPayload.theme = profile.theme
+          if (profile.accentColor) settingsPayload.accentColor = profile.accentColor
 
-        dispatch({ type: 'LOAD_STATE', payload: { tasks, notes, activity } })
+          if (Object.keys(settingsPayload).length > 0) {
+            dispatch({ type: 'UPDATE_SETTINGS', payload: settingsPayload })
+          }
+
+          // Load XP dan level ke state
+          dispatch({
+            type: 'LOAD_STATE',
+            payload: {
+              tasks,
+              notes,
+              activity,
+              xp: profile.xp ?? 0,
+              level: profile.level ?? 1,
+            },
+          })
+        } else {
+          dispatch({ type: 'LOAD_STATE', payload: { tasks, notes, activity } })
+        }
       } catch (err) {
         console.error('Failed to load data:', err)
       }
@@ -62,7 +81,6 @@ export function useSupabaseSync() {
   // Sync tasks changes
   useEffect(() => {
     if (!user || !initialized.current) return
-
     const prev = prevTasks.current
     const curr = state.tasks
 
@@ -71,27 +89,23 @@ export function useSupabaseSync() {
         insertTask(user.id, task).catch(console.error)
       }
     })
-
     curr.forEach(task => {
       const old = prev.find(t => t.id === task.id)
       if (old && JSON.stringify(old) !== JSON.stringify(task)) {
         updateTask(user.id, task).catch(console.error)
       }
     })
-
     prev.forEach(task => {
       if (!curr.find(t => t.id === task.id)) {
         deleteTask(user.id, task.id).catch(console.error)
       }
     })
-
     prevTasks.current = curr
   }, [state.tasks, user])
 
   // Sync notes changes
   useEffect(() => {
     if (!user || !initialized.current) return
-
     const prev = prevNotes.current
     const curr = state.notes
 
@@ -100,27 +114,23 @@ export function useSupabaseSync() {
         insertNote(user.id, note).catch(console.error)
       }
     })
-
     curr.forEach(note => {
       const old = prev.find(n => n.id === note.id)
       if (old && JSON.stringify(old) !== JSON.stringify(note)) {
         updateNote(user.id, note).catch(console.error)
       }
     })
-
     prev.forEach(note => {
       if (!curr.find(n => n.id === note.id)) {
         deleteNote(user.id, note.id).catch(console.error)
       }
     })
-
     prevNotes.current = curr
   }, [state.notes, user])
 
   // Sync activity
   useEffect(() => {
     if (!user || !initialized.current) return
-
     const prev = prevActivity.current
     const curr = state.activity
 
@@ -129,7 +139,27 @@ export function useSupabaseSync() {
         insertActivity(user.id, log).catch(console.error)
       }
     })
-
     prevActivity.current = curr
   }, [state.activity, user])
+
+  // Sync XP, level, theme, accent color ke Supabase
+  // Debounce 1.5 detik supaya tidak spam saat user klik cepat
+  const syncProfileTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!user || !initialized.current) return
+
+    if (syncProfileTimeout.current) clearTimeout(syncProfileTimeout.current)
+    syncProfileTimeout.current = setTimeout(() => {
+      upsertProfile(user.id, {
+        xp: state.xp,
+        level: state.level,
+        theme: state.settings.theme,
+        accentColor: state.settings.accentColor,
+      }).catch(console.error)
+    }, 1500)
+
+    return () => {
+      if (syncProfileTimeout.current) clearTimeout(syncProfileTimeout.current)
+    }
+  }, [state.xp, state.level, state.settings.theme, state.settings.accentColor, user])
 }
