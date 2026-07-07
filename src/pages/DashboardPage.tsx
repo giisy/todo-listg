@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
+import type { Variants } from 'framer-motion'
 import { format, isToday, isPast, isTomorrow } from 'date-fns'
 import {
   CheckCircle2, Circle, Clock, AlertTriangle, TrendingUp,
@@ -11,7 +12,8 @@ import { MOTIVATIONAL_QUOTES, PRIORITY_CONFIG } from '@/constants'
 import { cn } from '@/utils/cn'
 import type { Task, ActivityLog } from '@/types'
 
-const item = {
+// Fix: tambah type Variants supaya tidak error di motion.div variants prop
+const item: Variants = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } },
 }
@@ -25,28 +27,23 @@ function getGreeting() {
 
 export default function DashboardPage() {
   const { state, dispatch } = useApp()
-  const { tasks, settings } = state
+  const { tasks, activity, settings } = state
 
   const today = new Date()
   const quote = MOTIVATIONAL_QUOTES[today.getDate() % MOTIVATIONAL_QUOTES.length]
 
   const stats = useMemo(() => {
-    // Fix: hitung task yang diselesaikan hari ini (pakai completedAt)
     const completedToday = tasks.filter(t =>
       t.status === 'done' && t.completedAt && isToday(new Date(t.completedAt))
     )
-    // Fix: today's tasks = due hari ini ATAU diselesaikan hari ini
     const dueToday = tasks.filter(t => t.dueDate && isToday(new Date(t.dueDate)))
     const todayIds = new Set([...completedToday.map(t => t.id), ...dueToday.map(t => t.id)])
     const todayTotal = todayIds.size
-    // Progress = completed today / total yang relevan hari ini
     const progress = todayTotal > 0 ? Math.round((completedToday.length / todayTotal) * 100) : 0
-
     const pending = tasks.filter(t => t.status !== 'done' && t.status !== 'archived')
     const overdue = tasks.filter(t =>
       t.status !== 'done' && t.dueDate && isPast(new Date(t.dueDate)) && !isToday(new Date(t.dueDate))
     )
-
     return { todayTotal, completedToday, pending, overdue, progress }
   }, [tasks])
 
@@ -81,27 +78,27 @@ export default function DashboardPage() {
                 <span className="text-2xs text-text-muted">{format(today, 'EEEE, MMMM d, yyyy')}</span>
               </div>
               <h2 className="text-2xl font-bold text-text-primary mb-1">
-  Hey, {settings.name}
-</h2>
+                Hey, {settings.name}
+              </h2>
 
-{/* XP Bar */}
-<div className="flex items-center gap-2 mb-2">
-  <span className="text-2xs font-bold text-[var(--accent-color)] uppercase tracking-wider">
-    Lv.{state.level}
-  </span>
-  <div className="flex-1 max-w-[140px] h-1.5 bg-border/40 rounded-full overflow-hidden">
-    <motion.div
-      key={state.xp}
-      initial={{ width: 0 }}
-      animate={{ width: `${state.xp % 100}%` }}
-      transition={{ duration: 0.8, ease: 'easeOut' }}
-      className="h-full bg-gradient-to-r from-[var(--accent-color)] to-accent-purple rounded-full"
-    />
-  </div>
-  <span className="text-2xs text-text-muted">{state.xp % 100}/100 XP</span>
-</div>
+              {/* XP Bar */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xs font-bold text-[var(--accent-color)] uppercase tracking-wider">
+                  Lv.{state.level}
+                </span>
+                <div className="flex-1 max-w-[140px] h-1.5 bg-border/40 rounded-full overflow-hidden">
+                  <motion.div
+                    key={state.xp}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${state.xp % 100}%` }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    className="h-full bg-gradient-to-r from-[var(--accent-color)] to-accent-purple rounded-full"
+                  />
+                </div>
+                <span className="text-2xs text-text-muted">{state.xp % 100}/100 XP</span>
+              </div>
 
-<p className="text-sm text-text-secondary italic">"{quote}"</p>
+              <p className="text-sm text-text-secondary italic">"{quote}"</p>
               <div className="mt-4 flex items-center gap-3">
                 <button
                   onClick={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'today' })}
@@ -129,10 +126,10 @@ export default function DashboardPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Today's Tasks", value: stats.todayTotal, icon: <Target size={16} />, iconColor: 'text-[var(--accent-color)]', iconBg: 'bg-[var(--accent-color)]/10' },
-            { label: 'Completed', value: stats.completedToday.length, icon: <CheckCircle2 size={16} />, iconColor: 'text-accent-emerald', iconBg: 'bg-accent-emerald/10' },
-            { label: 'Pending', value: stats.pending.length, icon: <Clock size={16} />, iconColor: 'text-accent-amber', iconBg: 'bg-accent-amber/10' },
-            { label: 'Overdue', value: stats.overdue.length, icon: <AlertTriangle size={16} />, iconColor: 'text-accent-rose', iconBg: 'bg-accent-rose/10' },
+            { label: "Today's Tasks", value: stats.todayTotal,          icon: <Target size={16} />,      iconColor: 'text-[var(--accent-color)]', iconBg: 'bg-[var(--accent-color)]/10' },
+            { label: 'Completed',     value: stats.completedToday.length, icon: <CheckCircle2 size={16} />, iconColor: 'text-accent-emerald',        iconBg: 'bg-accent-emerald/10' },
+            { label: 'Pending',       value: stats.pending.length,       icon: <Clock size={16} />,        iconColor: 'text-accent-amber',          iconBg: 'bg-accent-amber/10' },
+            { label: 'Overdue',       value: stats.overdue.length,       icon: <AlertTriangle size={16} />, iconColor: 'text-accent-rose',           iconBg: 'bg-accent-rose/10' },
           ].map((s) => (
             <motion.div key={s.label} variants={item} initial="initial" animate="animate" className="stat-card">
               <div className={cn('w-9 h-9 rounded-md flex items-center justify-center', s.iconBg, s.iconColor)}>
@@ -178,7 +175,10 @@ export default function DashboardPage() {
                     <p className="text-sm font-medium text-text-secondary">No tasks yet</p>
                     <p className="text-xs text-text-muted">Add your first task to get started</p>
                   </div>
-                  <button onClick={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'today' })} className="btn-primary text-xs py-1.5 mt-1">
+                  <button
+                    onClick={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'today' })}
+                    className="btn-primary text-xs py-1.5 mt-1"
+                  >
                     <Plus size={12} /> Add Task
                   </button>
                 </div>
@@ -197,7 +197,7 @@ export default function DashboardPage() {
                 action="Full Analytics"
                 onAction={() => dispatch({ type: 'SET_ACTIVE_PAGE', payload: 'analytics' })}
               />
-              <WeeklyChart tasks={tasks} />
+              <WeeklyChart tasks={tasks} activity={activity} />
             </motion.div>
           </div>
 
@@ -225,7 +225,10 @@ export default function DashboardPage() {
                       <div key={task.id} className="flex items-center gap-3 py-1.5">
                         <span className="priority-dot" style={{ background: PRIORITY_CONFIG[task.priority].dot }} />
                         <p className="text-xs text-text-primary truncate flex-1">{task.title}</p>
-                        <span className={cn('text-2xs font-medium flex-shrink-0', isOverdue ? 'text-accent-rose' : isTodayTask ? 'text-accent-amber' : 'text-text-muted')}>
+                        <span className={cn(
+                          'text-2xs font-medium flex-shrink-0',
+                          isOverdue ? 'text-accent-rose' : isTodayTask ? 'text-accent-amber' : 'text-text-muted'
+                        )}>
                           {label}
                         </span>
                       </div>
@@ -241,7 +244,8 @@ export default function DashboardPage() {
   )
 }
 
-function WeeklyChart({ tasks }: { tasks: Task[] }) {
+// Fix: tambah activity prop, baca dari activity logs bukan task.completedAt
+function WeeklyChart({ tasks, activity }: { tasks: Task[]; activity: ActivityLog[] }) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (6 - i))
@@ -251,10 +255,10 @@ function WeeklyChart({ tasks }: { tasks: Task[] }) {
       new Date(t.createdAt).toDateString() === d.toDateString()
     ).length
 
-    // Hitung dari completedAt task, bukan activity log
-    // Kalau task di-uncheck, completedAt = undefined → tidak terhitung
-    const completed = tasks.filter(t =>
-      t.completedAt && new Date(t.completedAt).toDateString() === d.toDateString()
+    // Fix: pakai activity logs — tidak hilang saat task repeat di-reset
+    const completed = activity.filter(a =>
+      a.type === 'completed' &&
+      new Date(a.timestamp).toDateString() === d.toDateString()
     ).length
 
     return { label, completed, created }
@@ -308,7 +312,10 @@ function ProgressRing({ progress, size, strokeWidth }: { progress: number; size:
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(42,42,42,0.8)" strokeWidth={strokeWidth} />
         <motion.circle
           cx={size / 2} cy={size / 2} r={r}
-          fill="none" stroke="url(#grad)" strokeWidth={strokeWidth} strokeLinecap="round"
+          fill="none"
+          stroke="url(#grad)"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: circumference - (progress / 100) * circumference }}
@@ -328,7 +335,12 @@ function ProgressRing({ progress, size, strokeWidth }: { progress: number; size:
   )
 }
 
-function SectionHeader({ icon, label, action, onAction }: { icon: React.ReactNode; label: string; action?: string; onAction?: () => void }) {
+function SectionHeader({ icon, label, action, onAction }: {
+  icon: React.ReactNode
+  label: string
+  action?: string
+  onAction?: () => void
+}) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2 text-text-secondary">
@@ -336,7 +348,10 @@ function SectionHeader({ icon, label, action, onAction }: { icon: React.ReactNod
         <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
       </div>
       {action && (
-        <button onClick={onAction} className="text-2xs text-text-muted hover:text-[var(--accent-color)] transition-colors flex items-center gap-1">
+        <button
+          onClick={onAction}
+          className="text-2xs text-text-muted hover:text-[var(--accent-color)] transition-colors flex items-center gap-1"
+        >
           {action} <ChevronRight size={11} />
         </button>
       )}
@@ -349,12 +364,22 @@ function TaskRow({ task }: { task: Task }) {
   const isDone = task.status === 'done'
   return (
     <div className="flex items-center gap-3 py-2 px-3 rounded-md hover:bg-white/5 transition-all duration-150 group">
-      <button onClick={() => dispatch({ type: 'TOGGLE_TASK', payload: task.id })} className="flex-shrink-0 hover:scale-110 transition-transform">
-        {isDone ? <CheckCircle2 size={15} className="text-accent-emerald" /> : <Circle size={15} className="text-text-muted group-hover:text-text-secondary transition-colors" />}
+      <button
+        onClick={() => dispatch({ type: 'TOGGLE_TASK', payload: task.id })}
+        className="flex-shrink-0 hover:scale-110 transition-transform"
+      >
+        {isDone
+          ? <CheckCircle2 size={15} className="text-accent-emerald" />
+          : <Circle size={15} className="text-text-muted group-hover:text-text-secondary transition-colors" />
+        }
       </button>
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm font-medium truncate', isDone ? 'line-through text-text-muted' : 'text-text-primary')}>{task.title}</p>
-        {task.dueDate && <p className="text-2xs text-text-muted">{format(new Date(task.dueDate), 'MMM d')}</p>}
+        <p className={cn('text-sm font-medium truncate', isDone ? 'line-through text-text-muted' : 'text-text-primary')}>
+          {task.title}
+        </p>
+        {task.dueDate && (
+          <p className="text-2xs text-text-muted">{format(new Date(task.dueDate), 'MMM d')}</p>
+        )}
       </div>
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <span className="priority-dot" style={{ background: PRIORITY_CONFIG[task.priority].dot }} />
