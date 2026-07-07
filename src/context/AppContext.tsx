@@ -59,6 +59,13 @@ function addActivity(state: AppState, log: Omit<ActivityLog, 'id' | 'timestamp'>
   return [entry, ...state.activity].slice(0, 50)
 }
 
+// Hapus 1 activity log 'completed' paling baru untuk task ini (dipanggil saat task di-uncheck)
+function removeLastCompletedActivity(activity: ActivityLog[], taskId: string): ActivityLog[] {
+  const index = activity.findIndex(a => a.type === 'completed' && a.taskId === taskId)
+  if (index === -1) return activity
+  return [...activity.slice(0, index), ...activity.slice(index + 1)]
+}
+
 // ─── Baca localStorage SAAT initialState dibentuk ─────────────────────────────
 // Ini fix root cause: useEffect async = selalu flash ke default dulu
 function loadFromStorage<T>(key: string, fallback: T): T {
@@ -173,7 +180,7 @@ function reducer(state: AppState, action: AppAction): AppState {
     tasks: state.tasks.map(t => t.id === action.payload ? updated : t),
     activity: completing
       ? addActivity(state, { type: 'completed', taskId: task.id, taskTitle: task.title })
-      : state.activity,
+      : removeLastCompletedActivity(state.activity, task.id),
     xp: newXp,
     level: newLevel,
   }
