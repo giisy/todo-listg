@@ -1,60 +1,9 @@
 # Phase 2 Core UX Improvements - Implementation Summary
 
 ## Overview
-Successfully implemented Task Drag & Drop System and Calendar View for the TaskFlow task management app.
+Implemented Calendar View for the TaskFlow task management app. Drag & Drop system was previously implemented but has since been removed.
 
-## 1. Task Drag & Drop System
-
-### Dependencies Added
-- `@dnd-kit/core@^6.3.1`
-- `@dnd-kit/sortable@^9.0.0`
-- `@dnd-kit/utilities@^3.2.2`
-
-### New Components Created
-
-#### `SortableTaskItem.tsx` (`src/components/common/SortableTaskItem.tsx`)
-- Wraps task items with drag functionality
-- Uses `@dnd-kit/sortable` for drag management
-- Visual drag handle (GripVertical icon) that appears on hover
-- Disabled state support for when drag & drop is disabled
-- Visual feedback during drag (opacity change, scale)
-- ARIA labels for accessibility
-
-#### `DraggableTaskList.tsx` (`src/components/common/DraggableTaskList.tsx`)
-- Manages drag & drop context for task lists
-- Configured for vertical list sorting
-- Pointer sensor with 8px activation distance for better UX
-- Keyboard sensor for accessible navigation
-- Falls back to regular list when disabled
-
-### Modified Pages
-
-#### `TodayPage.tsx`
-- Added drag & drop toggle button (🔓/🔒)
-- Integrated `DraggableTaskList` and `SortableTaskItem`
-- Drag & drop only available when sorting by "Newest"
-- Optimistic updates through `REORDER_TASKS` action
-- Smooth transitions and animations
-
-#### `ImportantPage.tsx`
-- Added drag & drop toggle button
-- Wrapped both "Starred" and "Pinned" sections
-- Integrated drag & drop components
-- Maintains task data integrity during reordering
-
-#### `DashboardPage.tsx`
-- Added drag & drop to "Pinned" and "Recent Tasks" sections
-- Integrated components seamlessly
-- Smooth animations preserved
-
-### Context Updates
-
-#### `AppContext.tsx`
-- Added `REORDER_TASKS` action to handle task reordering
-- Updates task array with optimistic UI updates
-- No backend persistence (as required)
-
-## 2. Calendar View
+## Calendar View
 
 ### New Page Created
 
@@ -101,14 +50,6 @@ Successfully implemented Task Drag & Drop System and Calendar View for the TaskF
 
 ## Technical Details
 
-### Drag & Drop Features
-- **Smooth Animations**: CSS transforms with @dnd-kit utilities
-- **Visual Feedback**: Drag handle appearance, opacity changes, scale effects
-- **Mobile Support**: Touch sensors with appropriate activation distance
-- **Keyboard Navigation**: Full keyboard support for accessibility
-- **Toggle Control**: Users can enable/disable drag & drop per page
-- **Optimistic Updates**: UI updates immediately, persists to localStorage
-
 ### Calendar Features
 - **Date Handling**: Uses date-fns for robust date manipulation
 - **Edge Cases**: Handles leap years, different months, first day of week setting
@@ -127,41 +68,15 @@ Successfully implemented Task Drag & Drop System and Calendar View for the TaskF
 ## Files Modified/Created
 
 ### Created Files
-1. `src/components/common/SortableTaskItem.tsx`
-2. `src/components/common/DraggableTaskList.tsx`
-3. `src/pages/CalendarPage.tsx`
-4. `IMPLEMENTATION_SUMMARY.md`
+1. `src/pages/CalendarPage.tsx`
+2. `IMPLEMENTATION_SUMMARY.md`
 
 ### Modified Files
-1. `package.json` - Added dnd-kit dependencies
-2. `src/types/index.ts` - Added 'calendar' to NavPage
-3. `src/context/AppContext.tsx` - Added REORDER_TASKS action
-4. `src/App.tsx` - Added calendar route
-5. `src/layouts/Sidebar.tsx` - Added calendar navigation
-6. `src/pages/TodayPage.tsx` - Integrated drag & drop
-7. `src/pages/ImportantPage.tsx` - Integrated drag & drop
-8. `src/pages/DashboardPage.tsx` - Integrated drag & drop
-
-## Installation Instructions
-
-To install the new dependencies:
-```bash
-npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
-```
-
-Or if you have package.json updated:
-```bash
-npm install
-```
+1. `src/types/index.ts` - Added 'calendar' to NavPage
+2. `src/App.tsx` - Added calendar route
+3. `src/layouts/Sidebar.tsx` - Added calendar navigation
 
 ## Usage
-
-### Drag & Drop
-1. Navigate to Today, Important, or Dashboard pages
-2. Click the "🔓 Drag" button to enable drag & drop (default: enabled)
-3. Drag tasks using the grip handle that appears on hover
-4. Release to reorder - changes are saved immediately
-5. Click "🔒 Lock" to disable drag & drop
 
 ### Calendar
 1. Navigate to Calendar from the sidebar
@@ -173,15 +88,12 @@ npm install
 7. Completed tasks show line-through styling
 
 ## Accessibility Features
-- Keyboard navigation for drag & drop
 - ARIA labels on all interactive elements
 - Proper focus states
 - Screen reader friendly
-- Touch-friendly drag handles
 - Sufficient color contrast
 
 ## Performance Considerations
-- Optimistic updates for instant UI feedback
 - Efficient date calculations with date-fns
 - Memoized computations for expensive operations
 - Smooth animations with hardware acceleration
@@ -193,8 +105,6 @@ npm install
 - Keyboard-only navigation support
 
 ## Future Enhancements
-- Sync task order with backend
-- Add drag & drop between different lists
 - Calendar export/print functionality
 - Task drag & drop in calendar view
 - Advanced calendar filtering
