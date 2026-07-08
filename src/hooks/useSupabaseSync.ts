@@ -45,12 +45,16 @@ export function useSupabaseSync() {
         prevNotes.current = notes
         prevActivity.current = activity
 
-        // Load semua data profile termasuk XP, level, theme, accent
+        // Load semua data profile termasuk XP, level, theme, accent, dan settings lainnya
         if (profile) {
           const settingsPayload: Record<string, unknown> = {}
-          if (profile.name)        settingsPayload.name = profile.name
-          if (profile.theme)       settingsPayload.theme = profile.theme
-          if (profile.accentColor) settingsPayload.accentColor = profile.accentColor
+          if (profile.name)                       settingsPayload.name = profile.name
+          if (profile.theme)                      settingsPayload.theme = profile.theme
+          if (profile.accentColor)                settingsPayload.accentColor = profile.accentColor
+          if (profile.notifications !== undefined) settingsPayload.notifications = profile.notifications
+          if (profile.firstDayOfWeek)              settingsPayload.firstDayOfWeek = profile.firstDayOfWeek
+          if (profile.pomodoroWork !== undefined)  settingsPayload.pomodoroWork = profile.pomodoroWork
+          if (profile.pomodoroBreak !== undefined) settingsPayload.pomodoroBreak = profile.pomodoroBreak
 
           if (Object.keys(settingsPayload).length > 0) {
             dispatch({ type: 'UPDATE_SETTINGS', payload: settingsPayload })
@@ -142,8 +146,8 @@ export function useSupabaseSync() {
     prevActivity.current = curr
   }, [state.activity, user])
 
-  // Sync XP, level, theme, accent color ke Supabase
-  // Debounce 1.5 detik supaya tidak spam saat user klik cepat
+  // Sync XP, level, dan seluruh settings (theme, accent, name, notifications, firstDayOfWeek, pomodoro) ke Supabase
+  // Debounce 1.5 detik supaya tidak spam saat user klik cepat / ganti-ganti settings
   const syncProfileTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     if (!user || !initialized.current) return
@@ -153,13 +157,29 @@ export function useSupabaseSync() {
       upsertProfile(user.id, {
         xp: state.xp,
         level: state.level,
+        name: state.settings.name,
         theme: state.settings.theme,
         accentColor: state.settings.accentColor,
+        notifications: state.settings.notifications,
+        firstDayOfWeek: state.settings.firstDayOfWeek,
+        pomodoroWork: state.settings.pomodoroWork,
+        pomodoroBreak: state.settings.pomodoroBreak,
       }).catch(console.error)
     }, 1500)
 
     return () => {
       if (syncProfileTimeout.current) clearTimeout(syncProfileTimeout.current)
     }
-  }, [state.xp, state.level, state.settings.theme, state.settings.accentColor, user])
+  }, [
+    state.xp,
+    state.level,
+    state.settings.name,
+    state.settings.theme,
+    state.settings.accentColor,
+    state.settings.notifications,
+    state.settings.firstDayOfWeek,
+    state.settings.pomodoroWork,
+    state.settings.pomodoroBreak,
+    user,
+  ])
 }

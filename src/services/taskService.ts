@@ -7,10 +7,14 @@ export const fetchProfile = async (userId: string): Promise<{
   level?: number
   theme?: string
   accentColor?: string
+  notifications?: boolean
+  firstDayOfWeek?: 'monday' | 'sunday'
+  pomodoroWork?: number
+  pomodoroBreak?: number
 } | null> => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('name, xp, level, theme, accent_color')
+    .select('name, xp, level, theme, accent_color, notifications, first_day_of_week, pomodoro_work, pomodoro_break')
     .eq('id', userId)
     .single()
   if (error) return null
@@ -20,6 +24,10 @@ export const fetchProfile = async (userId: string): Promise<{
     level: data.level ?? 1,
     theme: data.theme ?? 'dark',
     accentColor: data.accent_color ?? '#3B82F6',
+    notifications: data.notifications ?? true,
+    firstDayOfWeek: data.first_day_of_week ?? 'monday',
+    pomodoroWork: data.pomodoro_work ?? 25,
+    pomodoroBreak: data.pomodoro_break ?? 5,
   }
 }
 
@@ -31,6 +39,10 @@ export const upsertProfile = async (
     level?: number
     theme?: string
     accentColor?: string
+    notifications?: boolean
+    firstDayOfWeek?: 'monday' | 'sunday'
+    pomodoroWork?: number
+    pomodoroBreak?: number
   }
 ): Promise<void> => {
   const { error } = await supabase
@@ -42,6 +54,10 @@ export const upsertProfile = async (
       ...(data.level !== undefined && { level: data.level }),
       ...(data.theme !== undefined && { theme: data.theme }),
       ...(data.accentColor !== undefined && { accent_color: data.accentColor }),
+      ...(data.notifications !== undefined && { notifications: data.notifications }),
+      ...(data.firstDayOfWeek !== undefined && { first_day_of_week: data.firstDayOfWeek }),
+      ...(data.pomodoroWork !== undefined && { pomodoro_work: data.pomodoroWork }),
+      ...(data.pomodoroBreak !== undefined && { pomodoro_break: data.pomodoroBreak }),
     }, { onConflict: 'id' })
   if (error) throw error
 }
