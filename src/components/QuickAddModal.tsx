@@ -14,7 +14,7 @@ interface QuickAddModalProps {
 
 export default function QuickAddModal({ onClose }: QuickAddModalProps) {
   const { dispatch } = useApp()
-  const toast = useToast()
+  const { toast } = useToast()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<Priority>('medium')

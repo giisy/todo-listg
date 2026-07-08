@@ -11,7 +11,7 @@ import { exportData } from '@/utils/dataExport'
 export default function SettingsPage() {
   const { state, dispatch } = useApp()
   const { updateProfile } = useAuth()
-  const toast = useToast()
+  const { toast } = useToast()
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState(state.settings.name)

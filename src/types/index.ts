@@ -37,7 +37,7 @@ export interface Task {
   isFavorite: boolean
   isPinned: boolean
   progress: number
-  order: number
+  order?: number
   createdAt: string
   updatedAt: string
   completedAt?: string
