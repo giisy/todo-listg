@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (name: string) => {
     if (!user) return
-    await upsertProfile(user.id, name)
+    await upsertProfile(user.id, { name })
     setProfile({ name })
   }
 
