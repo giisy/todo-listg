@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
@@ -24,6 +24,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { state, dispatch } = useApp()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   useNotifications()
+
+  // Register SW khusus notifikasi (terpisah dari SW yang di-generate VitePWA)
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/todo-listg/sw.js', {
+        scope: '/todo-listg/',
+      }).catch(err => console.warn('[TaskFlow] Notification SW registration failed:', err))
+    }
+  }, [])
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg-primary">

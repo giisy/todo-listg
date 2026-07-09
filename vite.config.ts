@@ -8,11 +8,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      strategies: 'injectManifest',
-      srcDir: 'public',
-      filename: 'sw.js',
+      // Pakai generateSW supaya nggak konflik dengan rolldown bundler (Vite 8)
+      // SW untuk notifikasi di-register manual via useNotifications
+      strategies: 'generateSW',
       base: '/todo-listg/',
       scope: '/todo-listg/',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallback: '/todo-listg/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
+      },
       manifest: {
         name: 'TaskFlow',
         short_name: 'TaskFlow',
