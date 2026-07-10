@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect x="0" y="0" width="512" height="512" rx="114" fill="#0B1628"/>
+
+  <!-- Cyan accent bar kiri atas -->
+  <rect x="0" y="0" width="14" height="190" rx="7" fill="#22D4E8"/>
+  <!-- Cyan accent bar bawah kanan -->
+  <rect x="300" y="498" width="212" height="14" rx="7" fill="#22D4E8"/>
+
+  <!-- Heartbeat line tipis di background -->
+  <polyline
+    points="20,256 70,256 98,196 132,316 162,216 192,256 310,256"
+    fill="none"
+    stroke="#22D4E8"
+    stroke-width="4"
+    stroke-opacity="0.18"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Huruf T -->
+  <rect x="72" y="172" width="160" height="30" rx="5" fill="#FFFFFF"/>
+  <rect x="137" y="172" width="30" height="176" rx="5" fill="#FFFFFF"/>
+
+  <!-- Huruf F -->
+  <rect x="252" y="172" width="188" height="30" rx="5" fill="#22D4E8"/>
+  <rect x="252" y="172" width="30" height="176" rx="5" fill="#22D4E8"/>
+  <rect x="252" y="258" width="148" height="28" rx="5" fill="#22D4E8"/>
+
+  <!-- Dot aksen pojok kanan atas -->
+  <circle cx="464" cy="68" r="14" fill="#22D4E8" opacity="0.7"/>
+  <circle cx="494" cy="68" r="8" fill="#22D4E8" opacity="0.35"/>
+</svg>
