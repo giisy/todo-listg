@@ -134,7 +134,7 @@ function reducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         tasks: [
-          { ...action.payload, order: Math.max(...state.tasks.map(t => t.order), 0) + 1 },
+          { ...action.payload, order: Math.max(0, ...state.tasks.map(t => t.order ?? 0)) + 1 },
           ...state.tasks,
         ],
         activity: addActivity(state, {
